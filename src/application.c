@@ -53,6 +53,8 @@ void Initialize(void)
     // ... and the z-buffer
     g_ZBuffer = (float*)malloc(sizeof(float) * g_WindowWidth * g_WindowHeight);
 
+    ClearZBuffer();
+
     // creating a SDL texture that is used to display the color buffer
     g_pColorBufferTexture = SDL_CreateTexture(
         g_pRenderer,
@@ -68,7 +70,7 @@ void Initialize(void)
 
     // load mesh data from the file
 #if 1
-    bool result = LoadObjFileData("assets/f22.obj");
+    bool result = LoadObjFileData("assets/drone.obj");
     if (!result)
     {
         printf("\nERROR: can't read in .obj file data\n");
@@ -76,7 +78,7 @@ void Initialize(void)
         exit(-1);
     }
 
-    LoadPngTextureData("./assets/f22.png");
+    LoadPngTextureData("./assets/drone.png");
 #else
     // load hardcoded cube mesh data
     LoadCubeMeshData();
@@ -230,8 +232,8 @@ void Update(void)
     g_NumFacesToRender = 0;
 
     // update transformation of the mesh
-    g_Mesh.rotation.x    += 0.005f;
-    //g_Mesh.rotation.y    += 0.005f;
+    //g_Mesh.rotation.x    += 0.005f;
+    g_Mesh.rotation.y    += 0.005f;
     //g_Mesh.rotation.z    += 0.005f;
     //g_Mesh.scale.x       += 0.0002f;
     //g_Mesh.translation.x += 0.01f;
@@ -365,13 +367,14 @@ void Update(void)
     }
 
     //int numFacesToRender = ArrayLength(g_TrianglesToRender);
-
+#if 0
     // sort the triangles to render by their average depth
     SortTriangles(
         g_TrianglesToRender, 
         g_NumFacesToRender,
         0,                        // low
         g_NumFacesToRender - 1);   // hight
+#endif
 }
 
 ///////////////////////////////////////////////////////////
