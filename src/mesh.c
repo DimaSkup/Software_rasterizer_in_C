@@ -233,9 +233,20 @@ Face* ReadFacesData(FILE* pFile)
         face.a--;
         face.b--;
         face.c--;
+
+        // flip the V component to account for inverted UV-coords (V grows downwards)
+//    v0 = 1.0f - v0;
+ //   v1 = 1.0f - v1;
+   // v2 = 1.0f - v2;
+
         face.aUV = texCoords[texIdxs[0] - 1];
         face.bUV = texCoords[texIdxs[1] - 1];
         face.cUV = texCoords[texIdxs[2] - 1];
+
+        face.aUV.v = 1.0f - face.aUV.v;
+        face.bUV.v = 1.0f - face.bUV.v;
+        face.cUV.v = 1.0f - face.cUV.v;
+
         face.color = 0xFFFFFFFF;
         ArrayPush(faces, face);
         result = fgets(buffer, bufsize, pFile);  // read in a new line

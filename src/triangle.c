@@ -1,7 +1,72 @@
+// ==================================================================
+// Filename:    triangle.c
+// Description: implementation of functional for:
+//              1. rendering of triangles filled with solid color
+//              2. rendering of triangles which are textured
+// ==================================================================
 #include "triangle.h"
 #include "display.h"
 #include "array.h"
 #include "swap.h"
+
+
+///////////////////////////////////////////////////////////
+
+void ComputeReciprocalW1(
+    float* w0,               // w-component of point A
+    float* w1,               // ... of point B
+    float* w2)               // ... of point C
+{
+    // compute and write back reciprocal W for each input point
+    *w0 = 1.0f / *w0;
+    *w1 = 1.0f / *w1;
+    *w2 = 1.0f / *w2;
+}
+
+// ==================================================================
+// Return the barycentric weights alpha, beta, and gamma
+// for point p in the triangle ABC
+// ==================================================================
+/*
+              B
+             /|\
+            / | \
+           /  |  \
+          /  (p)  \
+         /  _/ \_  \
+        / _/     \_ \
+       /_/         \_\
+      A---------------C
+*/
+// ==================================================================
+void BarycentricWeights(
+    const Vec2Int a,      // point A
+    const Vec2Int b,      // point B
+    const Vec2Int c,      // point C
+    const Vec2Int p,      // point P
+    const Vec2Int ac,     
+    const float invArea,  // inverse area of doubled triangle                          
+    float* alpha,
+    float* beta,
+    float* gamma)
+{
+    // find the vectors between the vertices ABC and point p
+    const Vec2Int pc = {c.x - p.x, c.y - p.y}; // Vec2Sub(c, p);
+    const Vec2Int pb = {b.x - p.x, b.y - p.y}; // Vec2Sub(b, p);
+    const Vec2Int ap = {p.x - a.x, p.y - a.y}; // Vec2Sub(p, a);
+
+    // alpha = area of parallelogram-PBC over the area of the full parallelogram-ABC
+    *alpha = (pc.x * pb.y - pc.y * pb.x) * invArea;
+
+    // beta = area of parallelogram-APC over the area of the full parallelogram-ABC
+    *beta = (ac.x * ap.y - ac.y * ap.x) * invArea;
+
+    // gamma can be easily found since barycentric coordinated always add up to 1.0
+    *gamma = 1.0f - *alpha - *beta;
+}
+
+
+
 
 //===================================================================
 // draw a filled triangle with a flat bottom
@@ -151,155 +216,75 @@ void DrawFilledTriangle(
     }
 }
 
-
-// ==================================================================
-// painter algorithm: sort triangles by average depth
-// ==================================================================
-void SortTriangles(
-    Triangle* arr, 
-    const int numTriangles, 
-    const int low, 
-    const int high)
-{
-    // sort triangles by its average depth
-
-    if ((numTriangles > 0) && (low < high))
-    {
-        // simple bubble sort O_o
-        for (int i = 0; i < numTriangles; ++i)
-        {
-            for (int j = i; j < numTriangles; ++j)
-            {
-                if (arr[i].avgDepth < arr[j].avgDepth)
-                {
-                    // swap the triangle position in the array
-                    Triangle temp = arr[i];
-                    arr[i] = arr[j];
-                    arr[j] = temp;
-                }
-            }
-        }
-    }
-}
-
-// ==================================================================
-// Return the barycentric weights alpha, beta, and gamma
-// for point p in the triangle ABC
-// ==================================================================
-/*
-              B
-             /|\
-            / | \
-           /  |  \
-          /  (p)  \
-         /  _/ \_  \
-        / _/     \_ \
-       /_/         \_\
-      A---------------C
-*/
-// ==================================================================
-Vec3 BarycentricWeights(
-    const Vec2 a, 
-    const Vec2 b, 
-    const Vec2 c, 
-    const Vec2 p)
-{
-    // find the vectors between the vertices ABC and point p
-    const Vec2 ac = Vec2Sub(c, a);
-    const Vec2 ab = Vec2Sub(b, a);
-    const Vec2 pc = Vec2Sub(c, p);
-    const Vec2 pb = Vec2Sub(b, p);
-    const Vec2 ap = Vec2Sub(p, a);
-
-    // inverse area of the full parallelogram (doubled triangle ABC) using the cross product
-    float invArea = 1.0f / (ac.x * ab.y - ac.y * ab.x);   // 1.0f / Cross(AC, AB)
-
-    // alpha = area of parallelogram-PBC over the area of the full parallelogram-ABC
-    float alpha = (pc.x * pb.y - pc.y * pb.x) * invArea;
-
-    // beta = area of parallelogram-APC over the area of the full parallelogram-ABC
-    float beta = (ac.x * ap.y - ac.y * ap.x) * invArea;
-
-    // gamma can be easily found since barycentric coordinated always add up to 1.0
-    float gamma = 1.0f - alpha - beta;
-
-    Vec3 weights = { alpha, beta, gamma };
-    return weights;
-}
-
 // ==================================================================
 // Function to draw the textured pixel at pos X and Y using interpolation
 // ==================================================================
-void DrawTexel(
-    const int x, const int y, 
-    const uint32_t* texture,
-    const Vec4 pointA,
-    const Vec4 pointB,
-    const Vec4 pointC,
+void DrawTexelLine(
+    const Vec2Int a,   // point A
+    const Vec2Int b,   // point B
+    const Vec2Int c,   // point C
+    const Vec2Int ac,
     const Tex2 texA,
     const Tex2 texB,
-    const Tex2 texC)
+    const Tex2 texC,
+    const float invArea,
+    const float w0,
+    const float w1, 
+    const float w2,
+    const int xStart,
+    const int xEnd,
+    const int y,
+    const uint32_t* texture)
 {
-    const Vec2 p = { x, y };
-    const Vec2 a = { pointA.x, pointA.y };
-    const Vec2 b = { pointB.x, pointB.y };
-    const Vec2 c = { pointC.x, pointC.y };
-
-    const Vec3 weights = BarycentricWeights(a, b, c, p);
-
-    float alpha = weights.x;
-    float beta  = weights.y;
-    float gamma = weights.z;
-
-    // multiply reciprocal W of each point by alpha/beta/gamma
-    const float alphaMulRecipW = (pointA.w * alpha);
-    const float betaMulRecipW  = (pointB.w * beta);
-    const float gammaMulRecipW = (pointC.w * gamma);
-
-
-    // also interpolate the value of 1/w for the current pixel
-    float interpolatedReciprocalW = alphaMulRecipW + betaMulRecipW + gammaMulRecipW;
-
+    float alpha = 0.0f;
+    float beta  = 0.0f;
+    float gamma = 0.0f;
+   
     // compute index of the pixel into z-buffer
-    const int idx = (g_WindowWidth * y) + x;
+    int pixelIdx = g_WindowWidth * y + xStart;
 
-    // immediately test if the pixel is closer or farther from the camera so we will be able to skip unnecessary computations (in case if farther)
-    // NOTE: (1.0f - interpolated_recip_w): adjust 1/w so the pixels that are closer to the camera have smaller values (because bigger w gives us smaller 1/w so we failing z-test)    
-    if ((1.0f - interpolatedReciprocalW) < g_ZBuffer[idx])
+    // go through each pixel in horizontal line
+    for (int x = xStart; x < xEnd; x++, pixelIdx++)
     {
-        // update the z-buffer value with the 1/w of this current pixel
-        g_ZBuffer[idx] = 1.0f - interpolatedReciprocalW;
+        const Vec2Int p = { x, y };
+        BarycentricWeights(a, b, c, p, ac, invArea, &alpha, &beta, &gamma);
 
-        // interpolate u/w and v/w coords using barycentric weights and a factor of 1/w
-        float interpolatedU = (texA.u * alphaMulRecipW) + (texB.u * betaMulRecipW) + (texC.u * gammaMulRecipW);
-        float interpolatedV = (texA.v * alphaMulRecipW) + (texB.v * betaMulRecipW) + (texC.v * gammaMulRecipW);
+        // multiply reciprocal W of each point by alpha/beta/gamma
+        const float alphaMulRecipW = (w0 * alpha);
+        const float betaMulRecipW  = (w1 * beta);
+        const float gammaMulRecipW = (w2 * gamma);
 
-        float invInterpolatedReciprocalW = 1.0f / interpolatedReciprocalW;
-        
-        // now we can divide back both interpolated values by 1/w
-        interpolatedU *= invInterpolatedReciprocalW;
-        interpolatedV *= invInterpolatedReciprocalW;
+        // also interpolate the value of 1/w for the current pixel
+        float interpolatedReciprocalW = alphaMulRecipW + betaMulRecipW + gammaMulRecipW;
 
-        // map the UV coordinate to the full texture width and height
-        int tx = abs((int)(interpolatedU * g_TextureWidth))  % g_TextureWidth;
-        int ty = abs((int)(interpolatedV * g_TextureHeight)) % g_TextureHeight;
+        const float depth = 1.0f - interpolatedReciprocalW;
 
-        // so we draw the pixel at pos (x,y) with the color from the mapped texture only if the depth value is less that the previous one stored in the z-buffer
-        DrawPixel(x, y, texture[g_TextureWidth * ty + tx]);
-    }
-}
+        // immediately test if the pixel is closer or farther from the camera so we will be able to skip unnecessary computations (in case if farther)
+        // NOTE: (1.0f - interpolated_recip_w): adjust 1/w so the pixels that are closer to the camera have smaller values (because bigger w gives us smaller 1/w so we failing z-test)    
+        if (depth < g_ZBuffer[pixelIdx])
+        {
+            // update the z-buffer value with the 1/w of this current pixel
+            g_ZBuffer[pixelIdx] = depth;
 
-///////////////////////////////////////////////////////////
+            // interpolate u/w and v/w coords using barycentric weights and a factor of 1/w
+            float interpolatedU = (texA.u * alphaMulRecipW) + (texB.u * betaMulRecipW) + (texC.u * gammaMulRecipW);
+            float interpolatedV = (texA.v * alphaMulRecipW) + (texB.v * betaMulRecipW) + (texC.v * gammaMulRecipW);
 
-void ComputeReciprocalW(
-    Vec4* pPointA,
-    Vec4* pPointB,
-    Vec4* pPointC)
-{
-    // compute and write back reciprocal W for each input point
-    pPointA->w = 1.0f / pPointA->w;
-    pPointB->w = 1.0f / pPointB->w;
-    pPointC->w = 1.0f / pPointC->w;
+            float invInterpolatedReciprocalW = 1.0f / interpolatedReciprocalW;
+            
+            // now we can divide back both interpolated values by 1/w
+            interpolatedU *= invInterpolatedReciprocalW;
+            interpolatedV *= invInterpolatedReciprocalW;
+
+            // map the UV coordinate to the full texture width and height
+            int tx = abs((int)(interpolatedU * g_TextureWidth))  % g_TextureWidth;
+            int ty = abs((int)(interpolatedV * g_TextureHeight)) % g_TextureHeight;
+
+            // so we draw the pixel at pos (x,y) with the color from the mapped texture only if the depth value is less that the previous one stored in the z-buffer
+            DrawPixel(x, y, texture[g_TextureWidth * ty + tx]);
+
+        } // if
+    } // for
 }
 
 // ==================================================================
@@ -364,19 +349,21 @@ void DrawTexturedTriangle(
         SWAPF(&v0, &v1);
     }
 
-    // flip the V component to account for inverted UV-coords (V grows downwards)
-    v0 = 1.0f - v0;
-    v1 = 1.0f - v1;
-    v2 = 1.0f - v2;
-
-    Vec4 pointA = { x0, y0, z0, w0 };
-    Vec4 pointB = { x1, y1, z1, w1 };
-    Vec4 pointC = { x2, y2, z2, w2 };
     const Tex2 texA = { u0, v0 };
     const Tex2 texB = { u1, v1 };
     const Tex2 texC = { u2, v2 };
 
-    ComputeReciprocalW(&pointA, &pointB, &pointC);
+    ComputeReciprocalW1(&w0, &w1, &w2);
+   
+    const Vec2Int a = { x0, y0 };
+    const Vec2Int b = { x1, y1 };
+    const Vec2Int c = { x2, y2 };
+
+    // inverse area of the full parallelogram (doubled triangle ABC) using the cross product
+    const Vec2Int ac = {c.x - a.x, c.y - a.y};            
+    const Vec2Int ab = {b.x - a.x, b.y - a.y};            
+    float invArea = 1.0f / (ac.x * ab.y - ac.y * ab.x);   // 1.0f / Cross(AC, AB)
+
 
     // ----------------------------------------------------
     // Render the upper part of the triangle (flat-bottom)
@@ -384,11 +371,13 @@ void DrawTexturedTriangle(
     float invSlope1 = 0.0f;
     float invSlope2 = 0.0f;
 
-    if (y1 - y0 != 0) invSlope1 = (float)(x1 - x0) / abs(y1 - y0);
-    if (y2 - y0 != 0) invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
+    if (y2 - y0 != 0) 
+        invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
 
     if (y1 - y0 != 0)
-    {
+    { 
+        invSlope1 = (float)(x1 - x0) / abs(y1 - y0);
+
         for (int y = y0; y <= y1; y++)
         {
             int xStart = x1 + (y - y1) * invSlope1;
@@ -398,18 +387,19 @@ void DrawTexturedTriangle(
             if (xEnd < xStart)
                 SWAPI(xStart, xEnd);
 
-            for (int x = xStart; x < xEnd; x++)
-            {
-                // sample pixel color from the texture
-                DrawTexel(
-                    x, y, texture,
-                    pointA, 
-                    pointB,
-                    pointC,
-                    texA,
-                    texB,
-                    texC);
-            }
+            // sample pixel color from the texture
+            DrawTexelLine(
+                a, b, c,
+                ac, 
+                texA,
+                texB,
+                texC,
+                invArea,
+                w0, w1, w2,
+                xStart,
+                xEnd,
+                y,
+                texture);
         }
     }
 
@@ -417,7 +407,6 @@ void DrawTexturedTriangle(
     // ----------------------------------------------------
     // Render the bottom part of the triangle (flat-top)
     // ----------------------------------------------------
-
     if (y2 - y1 != 0)
     {
         invSlope1 = (float)(x2 - x1) / abs(y2 - y1);
@@ -431,18 +420,19 @@ void DrawTexturedTriangle(
             if (xEnd < xStart)
                 SWAPI(xStart, xEnd);
 
-            for (int x = xStart; x < xEnd; x++)
-            {
-                // sample pixel color from the texture
-                DrawTexel(
-                    x, y, texture,
-                    pointA, 
-                    pointB,
-                    pointC,
-                    texA,
-                    texB,
-                    texC); 
-            }
+            // sample pixel color from the texture
+            DrawTexelLine(
+                a, b, c,
+                ac, 
+                texA,
+                texB,
+                texC,
+                invArea,
+                w0, w1, w2,
+                xStart,
+                xEnd,
+                y,
+                texture);      
         }
     }
 }

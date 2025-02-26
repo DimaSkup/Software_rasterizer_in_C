@@ -9,6 +9,11 @@ typedef struct
     float x, y;
 } Vec2;
 
+typedef struct 
+{
+    int x, y;
+} Vec2Int;
+
 typedef struct
 {
     float x, y, z;

@@ -70,7 +70,7 @@ void Initialize(void)
 
     // load mesh data from the file
 #if 1
-    bool result = LoadObjFileData("assets/drone.obj");
+    bool result = LoadObjFileData("assets/crab.obj");
     if (!result)
     {
         printf("\nERROR: can't read in .obj file data\n");
@@ -78,7 +78,7 @@ void Initialize(void)
         exit(-1);
     }
 
-    LoadPngTextureData("./assets/drone.png");
+    LoadPngTextureData("./assets/crab.png");
 #else
     // load hardcoded cube mesh data
     LoadCubeMeshData();
@@ -359,22 +359,10 @@ void Update(void)
             g_Mesh.faces[i].color, 
             lightIntensityFactor);
 
-
         // save the projected triangle in the arr of triangles to render
         g_TrianglesToRender[g_NumFacesToRender] = projTriangle;
         g_NumFacesToRender++;
-        //ArrayPush(g_TrianglesToRender, projTriangle);
     }
-
-    //int numFacesToRender = ArrayLength(g_TrianglesToRender);
-#if 0
-    // sort the triangles to render by their average depth
-    SortTriangles(
-        g_TrianglesToRender, 
-        g_NumFacesToRender,
-        0,                        // low
-        g_NumFacesToRender - 1);   // hight
-#endif
 }
 
 ///////////////////////////////////////////////////////////

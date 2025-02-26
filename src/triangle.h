@@ -1,3 +1,10 @@
+// ==================================================================
+// Filename:    triangle.h
+// Description: functional for:
+//              1. rendering of triangles filled with solid color
+//              2. rendering of triangles which are textured
+// ==================================================================
+
 #ifndef TRIANGLE_H
 #define TRIANGLE_H
 
@@ -48,15 +55,22 @@ void SortTriangles(
     const int high);
 
 
-void DrawTexel(
-    const int x, const int y, 
-    const uint32_t* texture,
-    const Vec4 pointA,
-    const Vec4 pointB,
-    const Vec4 pointC,
-    const Tex2 tex0,
-    const Tex2 tex1,
-    const Tex2 tex2);
+void DrawTexelLine(
+    const Vec2Int a,   // point A
+    const Vec2Int b,   // point B
+    const Vec2Int c,   // point C
+    const Vec2Int ac,
+    const Tex2 texA,
+    const Tex2 texB,
+    const Tex2 texC,
+    const float invArea,
+    const float w0,
+    const float w1, 
+    const float w2,
+    const int xStart,
+    const int xEnd,
+    const int y,
+    const uint32_t* texture);
 
 
 void DrawTexturedTriangle(
