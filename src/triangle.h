@@ -34,7 +34,6 @@ typedef struct
     Vec4 points[3];
     Tex2 texCoords[3];
     uint32_t color;
-    float avgDepth;     // average depth of 3 vertices
 } Triangle;
 
 

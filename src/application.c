@@ -15,6 +15,7 @@ bool   g_IsRunning     = false;
 int    g_PrevFrameTime = 0;
 
 Vec3   g_CameraPos     = { 0,0,0 };
+Vec3   g_RotationStep  = { 0,0,0 };
 Matrix g_ProjMatrix;
 
 enum CullMethod   g_CullMethod = CULL_BACK;
@@ -23,13 +24,104 @@ enum RenderMethod g_RenderMethod = RENDER_TEXTURED;
 // compute the central pixel pos on the screen
 int g_WndHalfWidth  = 400;
 int g_WndHalfHeight = 300;
-
 int g_NumFacesToRender = 0;
+
+typedef enum 
+{
+    F22,
+    F117,
+    DRONE,
+    CRAB
+} AssetType;
+
+AssetType g_AssetType = DRONE;
 
 
 // ==================================================================
 // implementation of functions
-// ==================================================================
+// ================================================================== 
+void LoadF22(void)
+{
+    // load mesh data from the file
+    bool result = LoadObjFileData("assets/f22.obj");
+    if (!result)
+    {
+        printf("\nERROR: can't read in .obj file data\n");
+        Shutdown();
+        exit(-1);
+    }
+
+    // load mesh texture
+    LoadPngTextureData("./assets/f22.png");
+    
+    // alloc memory for all the triangles which can be rendered
+    g_TrianglesToRender = (Triangle*)malloc(sizeof(Triangle) * g_Mesh.numFaces);
+
+}
+
+///////////////////////////////////////////////////////////
+
+void LoadF117(void)
+{
+    // load mesh data from the file
+    bool result = LoadObjFileData("assets/f117.obj");
+    if (!result)
+    {
+        printf("\nERROR: can't read in .obj file data\n");
+        Shutdown();
+        exit(-1);
+    }
+
+    // load mesh texture
+    LoadPngTextureData("./assets/f117.png");
+    
+    // alloc memory for all the triangles which can be rendered
+    g_TrianglesToRender = (Triangle*)malloc(sizeof(Triangle) * g_Mesh.numFaces);
+}
+
+///////////////////////////////////////////////////////////
+
+void LoadDrone(void)
+{
+    // load mesh data from the file
+    bool result = LoadObjFileData("assets/drone.obj");
+    if (!result)
+    {
+        printf("\nERROR: can't read in .obj file data\n");
+        Shutdown();
+        exit(-1);
+    }
+
+    // load mesh texture
+    LoadPngTextureData("./assets/drone.png");
+    
+    // alloc memory for all the triangles which can be rendered
+    g_TrianglesToRender = (Triangle*)malloc(sizeof(Triangle) * g_Mesh.numFaces);
+}
+
+///////////////////////////////////////////////////////////
+
+void LoadCrab(void)
+{
+    // load mesh data from the file
+    bool result = LoadObjFileData("assets/crab.obj");
+    if (!result)
+    {
+        printf("\nERROR: can't read in .obj file data\n");
+        Shutdown();
+        exit(-1);
+    }
+
+    // load mesh texture
+    LoadPngTextureData("./assets/crab.png");
+    
+    // alloc memory for all the triangles which can be rendered
+    g_TrianglesToRender = (Triangle*)malloc(sizeof(Triangle) * g_Mesh.numFaces);
+
+}
+
+///////////////////////////////////////////////////////////
+
 void Initialize(void) 
 {
     // initialize window, some global variables and game objects
@@ -68,25 +160,10 @@ void Initialize(void)
     g_WndHalfHeight = (g_WindowHeight >> 1);
 
 
-    // load mesh data from the file
-#if 1
-    bool result = LoadObjFileData("assets/crab.obj");
-    if (!result)
-    {
-        printf("\nERROR: can't read in .obj file data\n");
-        Shutdown();
-        exit(-1);
-    }
-
-    LoadPngTextureData("./assets/crab.png");
-#else
-    // load hardcoded cube mesh data
-    LoadCubeMeshData();
-    LoadPngTextureData("./assets/cube.png");
-#endif
-
-    g_TrianglesToRender = (Triangle*)malloc(sizeof(Triangle) * g_Mesh.numFaces);
-
+    LoadDrone();
+    g_AssetType = DRONE;
+    g_RotationStep.y = 0.005f;
+    
     // Initialize the perspective projection matrix
     float fov         = 1.047197;                 // 60 degrees = PI/3
     float aspectRatio = (float)g_WindowHeight / (float)g_WindowWidth;
@@ -171,6 +248,70 @@ void ProcessKeydown(const int keycode)
             g_RenderMethod = RENDER_TEXTURED_WIRE;
             break;
         }
+        case SDLK_7:
+        {
+            // switch to show the drone asset
+
+            if (g_AssetType != DRONE)
+            {            
+                FreeAssetResources();
+                LoadDrone();
+                g_AssetType = DRONE;
+                g_Mesh.rotation.x = 0;
+                g_Mesh.rotation.y = 0;
+                g_RotationStep.x = 0.0f;
+                g_RotationStep.y = 0.005f;
+            }
+            break;
+        }
+        case SDLK_8:
+        {
+            // switch to show the crab asset
+            if (g_AssetType != CRAB)
+            {
+                FreeAssetResources();
+                LoadCrab();
+                g_AssetType = CRAB;
+                g_Mesh.rotation.x = 0;
+                g_Mesh.rotation.y = 0;
+                g_RotationStep.x = 0.0f;
+                g_RotationStep.y = 0.005f;
+            }
+            break;
+        }
+        case SDLK_9:
+        {
+            // switch to show the f22 asset
+            if (g_AssetType != F22)
+            {
+                FreeAssetResources();
+                LoadF22();
+                g_AssetType = F22;
+                g_Mesh.rotation.x = -1.59f;
+                g_Mesh.rotation.y = 0;
+                g_RotationStep.x = 0.005f;
+                g_RotationStep.y = 0.0f;
+
+            }
+            break;
+        }
+        case SDLK_0:
+        {
+            // switch to show the f117 asset
+            if (g_AssetType != F117)
+            {
+                FreeAssetResources();
+                LoadF117();
+                g_AssetType = F117;
+                g_Mesh.rotation.x = -1.59f;
+                g_Mesh.rotation.y = 0;
+                g_RotationStep.x = 0.005f;
+                g_RotationStep.y = 0.0f;
+
+            }
+            break;
+        }
+
         case SDLK_c:
         {
             // enable back-culling
@@ -232,8 +373,8 @@ void Update(void)
     g_NumFacesToRender = 0;
 
     // update transformation of the mesh
-    //g_Mesh.rotation.x    += 0.005f;
-    g_Mesh.rotation.y    += 0.005f;
+    g_Mesh.rotation.x    += g_RotationStep.x;
+    g_Mesh.rotation.y    += g_RotationStep.y;
     //g_Mesh.rotation.z    += 0.005f;
     //g_Mesh.scale.x       += 0.0002f;
     //g_Mesh.translation.x += 0.01f;
@@ -303,9 +444,10 @@ void Update(void)
 
         // ------------------------------------------------
 
-        // projected triangle and projected points
+        //
+        // create a projected 2D triangle which will be rendered
+        //
         Triangle projTriangle;           
-        Vec4 projPoints[3];         
 
         // loop all three vertices to perform projection
         for (int j = 0; j < 3; ++j)
@@ -314,43 +456,26 @@ void Update(void)
             MatrixMulVec4Project(
                 &g_ProjMatrix,
                 transVertices[j],
-                &projPoints[j]);
+                &projTriangle.points[j]);
 
             // scale into the view
-            projPoints[j].x *= g_WndHalfWidth;
-            projPoints[j].y *= g_WndHalfHeight;
+            projTriangle.points[j].x *= g_WndHalfWidth;
+            projTriangle.points[j].y *= g_WndHalfHeight;
 
             // invert the Y values to account for flipped screen Y coordinate
-            projPoints[j].y *= -1;
+            projTriangle.points[j].y *= -1;
 
             // translate the projected points to the middle of the screen
-            projPoints[j].x += g_WndHalfWidth;
-            projPoints[j].y += g_WndHalfHeight;
+            projTriangle.points[j].x += g_WndHalfWidth;
+            projTriangle.points[j].y += g_WndHalfHeight;
         }
-
-
-        //
-        // create a projected 2D triangle which will be rendered
-        //
-        
-        // store the projected points into the projected triangle
-        projTriangle.points[0] = projPoints[0];
-        projTriangle.points[1] = projPoints[1];
-        projTriangle.points[2] = projPoints[2];
-
-        // calculate the average depth for each face based on
-        // the vertices after transformation
-        projTriangle.avgDepth = (
-            transVertices[0].z + 
-            transVertices[1].z +  
-            transVertices[2].z) / 3.0f;
 
         // copy the textures coords into the projected triangle
         const Face* face = g_Mesh.faces + i;
         projTriangle.texCoords[0] = face->aUV;
         projTriangle.texCoords[1] = face->bUV;
         projTriangle.texCoords[2] = face->cUV;
-
+#if 1
         // calculate the light intensity based on face normal and light direction
         float lightIntensityFactor = -Vec3Dot(normal, g_LightDir.direction);
         
@@ -358,6 +483,7 @@ void Update(void)
         projTriangle.color = LightApplyIntensity(
             g_Mesh.faces[i].color, 
             lightIntensityFactor);
+#endif
 
         // save the projected triangle in the arr of triangles to render
         g_TrianglesToRender[g_NumFacesToRender] = projTriangle;
@@ -468,19 +594,23 @@ void Render(void)
 
 ///////////////////////////////////////////////////////////
 
-void FreeResources(void)
+void FreeAssetResources(void)
 {
-    // free the memory that was dynamicall allocated by the program
-    free(g_ColorBuffer);
     upng_free(g_PngTexture);
     
     ArrayFree((void**)&g_Mesh.faces);
     ArrayFree((void**)&g_Mesh.normals);
     ArrayFree((void**)&g_Mesh.vertices);
     free(g_TrianglesToRender);    
-    free(g_ZBuffer);
 }
 
 ///////////////////////////////////////////////////////////
 
+void FreeResources(void)
+{
+    // free the memory that was dynamicall allocated by the program
+    free(g_ColorBuffer);
+    free(g_ZBuffer);
 
+    FreeAssetResources();
+}

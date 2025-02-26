@@ -45,6 +45,7 @@ void ProcessKeydown(const int keycode);
 void Update(void);
 void Render(void);
 
+void FreeAssetResources(void);
 void FreeResources(void);
 
 #endif

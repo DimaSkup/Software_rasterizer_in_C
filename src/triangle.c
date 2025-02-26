@@ -311,6 +311,15 @@ void DrawTexelLine(
                         C(x2,y2)
 */
 //===================================================================
+
+void SwapTexCoords(Tex2* pTex1, Tex2* pTex2)
+{
+    Tex2 temp = *pTex1;
+    *pTex1 = *pTex2;
+    *pTex2 = temp;
+}
+
+
 void DrawTexturedTriangle(
     int x0, int y0, float z0, float w0,
     int x1, int y1, float z1, float w1,
@@ -320,38 +329,34 @@ void DrawTexturedTriangle(
     float u2, float v2,
     const uint32_t* texture)
 {
+    Tex2 texA = { u0, v0 };
+    Tex2 texB = { u1, v1 };
+    Tex2 texC = { u2, v2 };
 
     if (y0 > y1)
     {
         SWAPI(y0, y1);
         SWAPI(x0, x1);
-        SWAPF(&z0, &z1);
+        //SWAPF(&z0, &z1);
         SWAPF(&w0, &w1);
-        SWAPF(&u0, &u1);
-        SWAPF(&v0, &v1);   
+        SwapTexCoords(&texA, &texB);
     }
     if (y1 > y2)
     {
         SWAPI(y1, y2);
         SWAPI(x1, x2);
-        SWAPF(&z1, &z2);
+        //SWAPF(&z1, &z2);
         SWAPF(&w1, &w2);
-        SWAPF(&u1, &u2);
-        SWAPF(&v1, &v2);
+        SwapTexCoords(&texB, &texC);
     }
     if (y0 > y1)
     {
         SWAPI(y0, y1);
         SWAPI(x0, x1);
-        SWAPF(&z0, &z1);
+        //SWAPF(&z0, &z1);
         SWAPF(&w0, &w1);
-        SWAPF(&u0, &u1);
-        SWAPF(&v0, &v1);
+        SwapTexCoords(&texA, &texB);
     }
-
-    const Tex2 texA = { u0, v0 };
-    const Tex2 texB = { u1, v1 };
-    const Tex2 texC = { u2, v2 };
 
     ComputeReciprocalW1(&w0, &w1, &w2);
    
