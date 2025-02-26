@@ -25,6 +25,9 @@ $ make run
 ## Windows
 TODO
 
+# Control
+Toggle keys from 1 to 0 for changing render stuff (switch render/fill mode, or switch model)
+
 # Screenshots
 ![alt text](https://github.com/DimaSkup/Software_rasterizer_in_C/blob/master/screenshots/Screenshot%20from%202024-12-30%2014-52-55.png)
 ![alt text](https://github.com/DimaSkup/Software_rasterizer_in_C/blob/master/screenshots/Screenshot%20from%202025-01-03%2023-09-41.png)
