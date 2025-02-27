@@ -36,3 +36,4 @@ Toggle keys from 1 to 0 for changing render stuff (switch render/fill mode, or s
 ![alt text](https://github.com/DimaSkup/Software_rasterizer_in_C/blob/master/screenshots/Screenshot%20from%202025-02-23%2004-23-37.png)
 ![alt text](https://github.com/DimaSkup/Software_rasterizer_in_C/blob/master/screenshots/Screenshot%20from%202025-02-23%2004-24-46.png)
 ![alt text](https://github.com/DimaSkup/Software_rasterizer_in_C/blob/master/screenshots/Screenshot%20from%202025-02-23%2004-25-36.png)
+![alt text](https://github.com/DimaSkup/Software_rasterizer_in_C/blob/master/screenshots/Screenshot%20from%202025-02-27%2005-16-00.png)
