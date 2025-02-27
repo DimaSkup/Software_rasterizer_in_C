@@ -163,7 +163,9 @@ void Initialize(void)
     LoadDrone();
     g_AssetType = DRONE;
     g_RotationStep.y = 0.005f;
-    
+
+    Vec3Normalize(&g_LightDir.direction);
+
     // Initialize the perspective projection matrix
     float fov         = 1.047197;                 // 60 degrees = PI/3
     float aspectRatio = (float)g_WindowHeight / (float)g_WindowWidth;
@@ -429,7 +431,7 @@ void Update(void)
         // find the camera ray vector (pointA => camera_pos)
         Vec3 cameraRay = Vec3Sub(g_CameraPos, vecA);
 
-        Vec3Normalize(&cameraRay);
+        //Vec3Normalize(&cameraRay);
 
         // take the dot product btw the normal and the camera ray;
         // and if this dot prod is < 0, then we don't display the face
@@ -475,7 +477,7 @@ void Update(void)
         projTriangle.texCoords[0] = face->aUV;
         projTriangle.texCoords[1] = face->bUV;
         projTriangle.texCoords[2] = face->cUV;
-#if 1
+#if 0
         // calculate the light intensity based on face normal and light direction
         float lightIntensityFactor = -Vec3Dot(normal, g_LightDir.direction);
         
@@ -484,7 +486,11 @@ void Update(void)
             g_Mesh.faces[i].color, 
             lightIntensityFactor);
 #endif
+        projTriangle.color = g_Mesh.faces[i].color;
 
+        // calculate the light intensity based on face normal and light direction
+        projTriangle.lightIntensity = -Vec3Dot(normal, g_LightDir.direction);
+     
         // save the projected triangle in the arr of triangles to render
         g_TrianglesToRender[g_NumFacesToRender] = projTriangle;
         g_NumFacesToRender++;
@@ -511,9 +517,10 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
             const Vec4* p = triangles[i].points;   // an arr of three Vec2 points
 
             DrawFilledTriangle(
-                p[0].x, p[0].y, 
-                p[1].x, p[1].y, 
-                p[2].x, p[2].y, 
+                p[0].x, p[0].y, p[0].w,
+                p[1].x, p[1].y, p[1].w,
+                p[2].x, p[2].y, p[2].w,
+                triangles[i].lightIntensity,
                 triangles[i].color);
         }        
     }
@@ -534,6 +541,7 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
                 tex[0].u, tex[0].v,
                 tex[1].u, tex[1].v,
                 tex[2].u, tex[2].v,
+                triangles[i].lightIntensity,
                 g_MeshTexture);
         }
     }

@@ -34,6 +34,7 @@ typedef struct
     Vec4 points[3];
     Tex2 texCoords[3];
     uint32_t color;
+    float lightIntensity;   // over the triangle
 } Triangle;
 
 
@@ -41,9 +42,10 @@ typedef struct
 // Functions declarations
 // ==================================================================
 void DrawFilledTriangle(
-    const int x0, const int y0,
-    const int x1, const int y1,
-    const int x2, const int y2,
+    int x0, int y0, float w0,
+    int x1, int y1, float w1,
+    int x2, int y2, float w2,
+    const float lightIntensity,
     const uint32_t color);
 
 // sort triangles by average depth
@@ -66,6 +68,7 @@ void DrawTexelLine(
     const float w0,
     const float w1, 
     const float w2,
+    const float lightIntensity,
     const int xStart,
     const int xEnd,
     const int y,
@@ -79,6 +82,7 @@ void DrawTexturedTriangle(
     float u0, float v0,                     // uv texture coords of the 1st triangle vertex    
     float u1, float v1,                     // ... of the 2nd triangle vertex
     float u2, float v2,                     // ... and of the 3rd triangle vertex
+    float lightIntensity,                                            
     const uint32_t* texture);
 
 #endif

@@ -8,11 +8,11 @@
 #include "display.h"
 #include "array.h"
 #include "swap.h"
-
+#include "light.h"
 
 ///////////////////////////////////////////////////////////
 
-void ComputeReciprocalW1(
+void ComputeReciprocalW(
     float* w0,               // w-component of point A
     float* w1,               // ... of point B
     float* w2)               // ... of point C
@@ -64,9 +64,6 @@ void BarycentricWeights(
     // gamma can be easily found since barycentric coordinated always add up to 1.0
     *gamma = 1.0f - *alpha - *beta;
 }
-
-
-
 
 //===================================================================
 // draw a filled triangle with a flat bottom
@@ -142,6 +139,60 @@ void FillFlatTopTriangle(
     }
 }
 
+///////////////////////////////////////////////////////////
+
+void DrawDepthLine(
+   const Vec2Int a,
+   const Vec2Int b,
+   const Vec2Int c,
+   const Vec2Int ac,
+   const float invArea,
+   const float w0, 
+   const float w1, 
+   const float w2,
+   const float lightIntensity,
+   const int xStart,
+   const int xEnd,
+   const int y,
+   const uint32_t color)
+{
+    float alpha = 0.0f;
+    float beta = 0.0f;
+    float gamma = 0.0f;
+
+    // compute index of the pixel into z-buffer
+    int pixelIdx = g_WindowWidth * y + xStart;
+
+    // go through each pixel in horizontal line
+    for (int x = xStart; x < xEnd; x++, pixelIdx++)
+    {
+        const Vec2Int p = { x, y };
+        BarycentricWeights(a, b, c, p, ac, invArea, &alpha, &beta, &gamma);
+
+        // multiply reciprocal W of each point by alpha/beta/gamma
+        const float alphaMulRecipW = (w0 * alpha);
+        const float betaMulRecipW  = (w1 * beta);
+        const float gammaMulRecipW = (w2 * gamma);
+
+        // also interpolate the value of 1/w for the current pixel
+        float interpolatedReciprocalW = alphaMulRecipW + betaMulRecipW + gammaMulRecipW;
+
+        const float depth = 1.0f - interpolatedReciprocalW;
+
+        // immediately test if the pixel is closer or farther from the camera so we will be able to skip unnecessary computations (in case if farther)
+        // NOTE: (1.0f - interpolated_recip_w): adjust 1/w so the pixels that are closer to the camera have smaller values (because bigger w gives us smaller 1/w so we failing z-test)    
+        if (depth < g_ZBuffer[pixelIdx])
+        {
+            // update the z-buffer value with the 1/w of this current pixel
+            g_ZBuffer[pixelIdx] = depth;
+            
+            const uint32_t pixelColor = LightApplyIntensity(color, lightIntensity);
+
+            g_ColorBuffer[pixelIdx] = pixelColor;
+        }
+    }
+}
+
 
 // ==================================================================
 // Draw a filled triangle with the flat-top/flat-bottom method.
@@ -168,28 +219,114 @@ void FillFlatTopTriangle(
 */
 //===================================================================
 void DrawFilledTriangle(
-    int x0, int y0,
-    int x1, int y1,
-    int x2, int y2,
-    const u32 color)
+    int x0, int y0, float w0,
+    int x1, int y1, float w1,
+    int x2, int y2, float w2,
+    const float lightIntensity,
+    const uint32_t color)
 {
     // sort the vertices by Y-coordinate ascending (y0 < y1 < y2)
     if (y0 > y1)
     {
         SWAPI(y0, y1);
         SWAPI(x0, x1);
+        SWAPF(&w0, &w1);
     }
     if (y1 > y2)
     {
         SWAPI(y1, y2);
         SWAPI(x1, x2);
+        SWAPF(&w1, &w2);
     }
     if (y0 > y1)
     {
         SWAPI(y0, y1);
         SWAPI(x0, x1);
+        SWAPF(&w0, &w1);
     }
 
+    ComputeReciprocalW(&w0, &w1, &w2);
+
+    const Vec2Int a = { x0, y0 };
+    const Vec2Int b = { x1, y1 };
+    const Vec2Int c = { x2, y2 };
+
+    // inverse area of full parallelogram (doubled triangle ABC) using the cross product
+    const Vec2Int ac = {c.x - a.x, c.y - a.y};
+    const Vec2Int ab = {b.x - a.x, b.y - a.y};
+    float invArea = 1.0f / (ac.x * ab.y - ac.y * ab.x);  // 1.0f / Cross(AC, AB)
+
+    // ----------------------------------------------------
+    // Render the upper part of the triangle (flat-bottom)
+    // ----------------------------------------------------
+    float invSlope1 = 0.0f;
+    float invSlope2 = 0.0f;
+
+    
+    if (y1 - y0 != 0)
+    {
+        invSlope1 = (float)(x1 - x0) / abs(y1 - y0);
+
+        if (y2 - y0 != 0)
+            invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
+
+        for (int y = y0; y < y1; y++)
+        {
+            int xStart = x1 + (y - y1) * invSlope1;
+            int xEnd   = x0 + (y - y0) * invSlope2;
+
+            // swap if xStart is to the right of xEnd
+            if (xEnd < xStart)
+                SWAPI(xStart, xEnd);
+
+            DrawDepthLine(
+               a, b, c,
+               ac,
+               invArea,
+               w0, w1, w2,
+               lightIntensity,
+               xStart,
+               xEnd,
+               y,
+               color);
+        }
+    }
+
+    // ----------------------------------------------------
+    // Render the bottom part of the triangle (flat-top)
+    // ----------------------------------------------------
+   
+    if (y2 - y1 != 0)
+    {
+        invSlope1 = (float)(x2 - x1) / abs(y2 - y1);
+
+        if (y2 - y0 != 0) 
+            invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
+
+        for (int y = y1; y <= y2; y++)
+        {
+            int xStart = x1 + (y - y1) * invSlope1;
+            int xEnd   = x0 + (y - y0) * invSlope2;
+
+            // swap if xStart is to the right of xEnd:
+            if (xEnd < xStart)
+                SWAPI(xStart, xEnd);
+
+            DrawDepthLine(
+               a, b, c,
+               ac,
+               invArea,
+               w0, w1, w2,
+               lightIntensity,
+               xStart,
+               xEnd,
+               y,
+               color);
+        }
+    }
+
+
+#if 0
     // avoid division by zero (when delta_y == 0)
     if (y1 == y2)
     {
@@ -214,6 +351,7 @@ void DrawFilledTriangle(
         // draw flat-top triangle
         FillFlatTopTriangle(x1, y1, Mx, My, x2, y2, color);
     }
+#endif
 }
 
 // ==================================================================
@@ -231,6 +369,7 @@ void DrawTexelLine(
     const float w0,
     const float w1, 
     const float w2,
+    const float lightIntensity,
     const int xStart,
     const int xEnd,
     const int y,
@@ -279,9 +418,12 @@ void DrawTexelLine(
             // map the UV coordinate to the full texture width and height
             int tx = abs((int)(interpolatedU * g_TextureWidth))  % g_TextureWidth;
             int ty = abs((int)(interpolatedV * g_TextureHeight)) % g_TextureHeight;
+            
+            const uint32_t texColor = texture[g_TextureWidth * ty + tx];
+            const uint32_t pixelColor = LightApplyIntensity(texColor, lightIntensity);
 
             // so we draw the pixel at pos (x,y) with the color from the mapped texture only if the depth value is less that the previous one stored in the z-buffer
-            DrawPixel(x, y, texture[g_TextureWidth * ty + tx]);
+            DrawPixel(x, y, pixelColor);
 
         } // if
     } // for
@@ -319,6 +461,7 @@ void SwapTexCoords(Tex2* pTex1, Tex2* pTex2)
     *pTex2 = temp;
 }
 
+///////////////////////////////////////////////////////////
 
 void DrawTexturedTriangle(
     int x0, int y0, float z0, float w0,
@@ -327,6 +470,7 @@ void DrawTexturedTriangle(
     float u0, float v0,
     float u1, float v1,
     float u2, float v2,
+    float lightIntensity,                                            
     const uint32_t* texture)
 {
     Tex2 texA = { u0, v0 };
@@ -358,7 +502,7 @@ void DrawTexturedTriangle(
         SwapTexCoords(&texA, &texB);
     }
 
-    ComputeReciprocalW1(&w0, &w1, &w2);
+    ComputeReciprocalW(&w0, &w1, &w2);
    
     const Vec2Int a = { x0, y0 };
     const Vec2Int b = { x1, y1 };
@@ -369,21 +513,19 @@ void DrawTexturedTriangle(
     const Vec2Int ab = {b.x - a.x, b.y - a.y};            
     float invArea = 1.0f / (ac.x * ab.y - ac.y * ab.x);   // 1.0f / Cross(AC, AB)
 
-
+    
     // ----------------------------------------------------
     // Render the upper part of the triangle (flat-bottom)
     // ----------------------------------------------------
     float invSlope1 = 0.0f;
     float invSlope2 = 0.0f;
 
-    if (y2 - y0 != 0) 
-        invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
-
     if (y1 - y0 != 0)
     { 
-        invSlope1 = (float)(x1 - x0) / abs(y1 - y0);
+        if (y1 - y0 != 0) invSlope1 = (float)(x1 - x0) / abs(y1 - y0);
+        if (y2 - y0 != 0) invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
 
-        for (int y = y0; y <= y1; y++)
+        for (int y = y0; y < y1; y++)
         {
             int xStart = x1 + (y - y1) * invSlope1;
             int xEnd   = x0 + (y - y0) * invSlope2;
@@ -401,6 +543,7 @@ void DrawTexturedTriangle(
                 texC,
                 invArea,
                 w0, w1, w2,
+                lightIntensity,
                 xStart,
                 xEnd,
                 y,
@@ -408,20 +551,23 @@ void DrawTexturedTriangle(
         }
     }
 
-
     // ----------------------------------------------------
     // Render the bottom part of the triangle (flat-top)
     // ----------------------------------------------------
+   
     if (y2 - y1 != 0)
     {
-        invSlope1 = (float)(x2 - x1) / abs(y2 - y1);
-        
+        invSlope1 = 0.0f;
+        invSlope2 = 0.0f;
+        if (y2 - y1 != 0) invSlope1 = (float)(x2 - x1) / abs(y2 - y1);
+        if (y2 - y0 != 0) invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
+
         for (int y = y1; y <= y2; y++)
         {
             int xStart = x1 + (y - y1) * invSlope1;
             int xEnd   = x0 + (y - y0) * invSlope2;
 
-            // swap if xStart is to the right of xEnd
+            // swap if xStart is to the right of xEnd:
             if (xEnd < xStart)
                 SWAPI(xStart, xEnd);
 
@@ -434,6 +580,7 @@ void DrawTexturedTriangle(
                 texC,
                 invArea,
                 w0, w1, w2,
+                lightIntensity,
                 xStart,
                 xEnd,
                 y,

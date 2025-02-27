@@ -22,8 +22,8 @@ u32 LightApplyIntensity(
     // represent light intensity over a face
 
     // clamp in range [0, 1]
-    //lightMagnitude = (lightMagnitude < 0) ? 0 : lightMagnitude;
-    //lightMagnitude = (lightMagnitude > 1) ? 1 : lightMagnitude;
+    lightMagnitude = (lightMagnitude < 0) ? 0 : lightMagnitude;
+    lightMagnitude = (lightMagnitude > 1) ? 1 : lightMagnitude;
     
     u32 a = (originalColor & 0xFF000000);
     u32 r = (originalColor & 0x00FF0000) * lightMagnitude;
