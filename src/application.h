@@ -9,6 +9,7 @@
 #include "vector.h"
 #include "mesh.h"
 #include "matrix.h"
+#include "camera.h"
 #include "triangle.h"
 #include "light.h"
 #include "texture.h"
@@ -25,7 +26,6 @@ extern Triangle* g_TrianglesToRender;
 extern bool   g_IsRunning;	
 extern int    g_PrevFrameTime;
 
-extern Vec3   g_CameraPos;
 extern Matrix g_ProjMatrix;
 
 extern enum CullMethod   g_CullMethod;

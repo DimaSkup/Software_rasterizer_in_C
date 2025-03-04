@@ -13,10 +13,9 @@ Triangle* g_TrianglesToRender = NULL;
 
 bool   g_IsRunning     = false;
 int    g_PrevFrameTime = 0;
+float  g_DeltaTime     = 0;
 
-Vec3   g_CameraPos     = { 0,0,0 };
 Vec3   g_RotationStep  = { 0,0,0 };
-Matrix g_ProjMatrix;
 
 enum CullMethod   g_CullMethod = CULL_BACK;
 enum RenderMethod g_RenderMethod = RENDER_TEXTURED;
@@ -24,7 +23,7 @@ enum RenderMethod g_RenderMethod = RENDER_TEXTURED;
 // compute the central pixel pos on the screen
 int g_WndHalfWidth  = 400;
 int g_WndHalfHeight = 300;
-int g_NumFacesToRender = 0;
+int g_NumTrianglesToRender = 0;
 
 typedef enum 
 {
@@ -34,7 +33,14 @@ typedef enum
     CRAB
 } AssetType;
 
-AssetType g_AssetType = DRONE;
+AssetType g_AssetType = DRONE;  // asset type which are currently rendered
+
+// ==================================================================
+// Declaration of global transformation matrices
+// ==================================================================
+Matrix g_WorldMatrix;
+Matrix g_ViewMatrix;
+Matrix g_ProjMatrix;
 
 
 // ==================================================================
@@ -262,7 +268,7 @@ void ProcessKeydown(const int keycode)
                 g_Mesh.rotation.x = 0;
                 g_Mesh.rotation.y = 0;
                 g_RotationStep.x = 0.0f;
-                g_RotationStep.y = 0.005f;
+                g_RotationStep.y = 0.5f;
             }
             break;
         }
@@ -277,7 +283,7 @@ void ProcessKeydown(const int keycode)
                 g_Mesh.rotation.x = 0;
                 g_Mesh.rotation.y = 0;
                 g_RotationStep.x = 0.0f;
-                g_RotationStep.y = 0.005f;
+                g_RotationStep.y = 0.5f;
             }
             break;
         }
@@ -291,7 +297,7 @@ void ProcessKeydown(const int keycode)
                 g_AssetType = F22;
                 g_Mesh.rotation.x = -1.59f;
                 g_Mesh.rotation.y = 0;
-                g_RotationStep.x = 0.005f;
+                g_RotationStep.x = 0.5f;
                 g_RotationStep.y = 0.0f;
 
             }
@@ -307,7 +313,7 @@ void ProcessKeydown(const int keycode)
                 g_AssetType = F117;
                 g_Mesh.rotation.x = -1.59f;
                 g_Mesh.rotation.y = 0;
-                g_RotationStep.x = 0.005f;
+                g_RotationStep.x = 0.5f;
                 g_RotationStep.y = 0.0f;
 
             }
@@ -320,7 +326,7 @@ void ProcessKeydown(const int keycode)
             g_CullMethod = CULL_BACK;
             break;
         }
-        case SDLK_d:
+        case SDLK_x:
         {
             // disable back-culling
             g_CullMethod = CULL_NONE;
@@ -335,21 +341,78 @@ void ProcessInput(void)
 {
     // Poll system events and handle keyboard input
 
-    SDL_Event event;
-    SDL_PollEvent(&event);
+    const uint8_t* keys = SDL_GetKeyboardState(NULL);
 
-    switch (event.type) 
+    const float cameraMoveSpeed = 3.0f * g_DeltaTime;
+
+    // move left(A)/right(D)
+    if (keys[SDL_SCANCODE_A])
     {
-        case SDL_QUIT:             // if click "X" button of window
+        Vec3 up = {0,1,0};
+        g_Camera.right = Vec3Cross(up, g_Camera.direction);
+        Vec3Normalize(&g_Camera.right);
+
+        g_Camera.velocity = Vec3Mul(g_Camera.right, cameraMoveSpeed);
+        g_Camera.position = Vec3Sub(g_Camera.position, g_Camera.velocity);
+    }
+    else if (keys[SDL_SCANCODE_D])
+    {
+        Vec3 up = {0,1,0};
+        g_Camera.right = Vec3Cross(up, g_Camera.direction);
+        Vec3Normalize(&g_Camera.right);
+
+        g_Camera.velocity = Vec3Mul(g_Camera.right, cameraMoveSpeed);
+        g_Camera.position = Vec3Add(g_Camera.position, g_Camera.velocity);
+    }
+
+    // move forward(W)/backward(S)
+    if (keys[SDL_SCANCODE_S])
+    {
+        g_Camera.velocity = Vec3Mul(g_Camera.direction, cameraMoveSpeed);
+        g_Camera.position = Vec3Sub(g_Camera.position, g_Camera.velocity);
+    }
+    else if (keys[SDL_SCANCODE_W])
+    {
+        g_Camera.velocity = Vec3Mul(g_Camera.direction, cameraMoveSpeed);
+        g_Camera.position = Vec3Add(g_Camera.position, g_Camera.velocity);
+    }
+
+    // move up(space)/down(Z)
+    if (keys[SDL_SCANCODE_Z])
+        g_Camera.position.y -= cameraMoveSpeed;
+    else if (keys[SDL_SCANCODE_SPACE])
+        g_Camera.position.y += cameraMoveSpeed;
+
+    if (keys[SDL_SCANCODE_UP])
+        g_Camera.pitch -= 1.0f * g_DeltaTime;
+    else if (keys[SDL_SCANCODE_DOWN])
+        g_Camera.pitch += 1.0f * g_DeltaTime;
+
+    if (keys[SDL_SCANCODE_LEFT])
+        g_Camera.yaw -= 1.0f * g_DeltaTime;
+    else if (keys[SDL_SCANCODE_RIGHT])
+        g_Camera.yaw += 1.0f * g_DeltaTime; 
+
+
+
+    SDL_Event event;
+
+    while (SDL_PollEvent(&event) != 0)
+    {
+        switch (event.type) 
         {
-            g_IsRunning = false;
-            break;
+            case SDL_QUIT:             // if click "X" button of window
+            {
+                g_IsRunning = false;
+                break;
+            }
+            case SDL_KEYDOWN:
+            {
+                ProcessKeydown(event.key.keysym.sym);
+                break;
+            }      
         }
-        case SDL_KEYDOWN:
-        {
-            ProcessKeydown(event.key.keysym.sym);
-            break;
-        }      
+
     }
 }
 
@@ -357,6 +420,7 @@ void ProcessInput(void)
 
 void Update(void)
 {
+#if 0
     // wait some time until the reach the target frame time in ms
     int timeToWait = FRAME_TARGET_TIME - (SDL_GetTicks() - g_PrevFrameTime);
 
@@ -364,27 +428,50 @@ void Update(void)
     if (timeToWait > 0 && timeToWait <= FRAME_TARGET_TIME)
     {
         SDL_Delay(timeToWait);   
-        g_PrevFrameTime = SDL_GetTicks();
-    }    
+    }
+#endif    
+
+    // get a delta time factor converted to seconds to be used to update our game objects
+    g_DeltaTime = (SDL_GetTicks() - g_PrevFrameTime) * 0.001; 
+        
+    g_PrevFrameTime = SDL_GetTicks();
 
     // normalize the directed light vector, if we don't do this
     // we might explode the brightness value of the triangles colors
     Vec3Normalize(&g_LightDir.direction);
 
     // reset the number of faces to render for this frame    
-    g_NumFacesToRender = 0;
+    g_NumTrianglesToRender = 0;
 
     // update transformation of the mesh
-    g_Mesh.rotation.x    += g_RotationStep.x;
-    g_Mesh.rotation.y    += g_RotationStep.y;
-    //g_Mesh.rotation.z    += 0.005f;
+    //g_Mesh.rotation.x    += (g_RotationStep.x * g_DeltaTime);
+    //g_Mesh.rotation.y    += (g_RotationStep.y * g_DeltaTime);
+    //g_Mesh.rotation.z    += 0.005f * gDeltaTime;
     //g_Mesh.scale.x       += 0.0002f;
     //g_Mesh.translation.x += 0.01f;
     g_Mesh.translation.z  = 3.5f;
 
-    // create a world matrix combining scale, rotation and translation matrices
-    Matrix worldMatrix;
-    MatrixInitWorld(&g_Mesh.scale, &g_Mesh.rotation, &g_Mesh.translation, &worldMatrix);
+    // compute the new camera rotation and translation for the FPS camera movement
+    Vec3 worldUp = { 0,1,0 };
+    Vec4 target  = { 0,0,1,1 };
+    Matrix cameraRotationY;
+    Matrix cameraRotation;
+
+    Matrix R = MatrixRotationAxis(g_Camera.right, g_Camera.pitch);
+    MatrixRotationY(g_Camera.yaw, &cameraRotationY);
+    cameraRotation = MatrixMulMatrix(&R, &cameraRotationY);
+
+    MatrixMulVec4(&cameraRotation, target, &target);
+    g_Camera.direction = Vec3FromVec4(&target);
+
+    // offset the camera position in the direction where the camera is pointing at
+    Vec3 computedTarget = Vec3Add(g_Camera.position, g_Camera.direction);
+
+    // create a world matrix combining scale, rotation and translation matrices;
+    // and create a view matrix as well
+
+    MatrixInitWorld(&g_Mesh.scale, &g_Mesh.rotation, &g_Mesh.translation, &g_WorldMatrix);
+    MatrixView(g_Camera.position, computedTarget, worldUp, &g_ViewMatrix);
 
     // loop all triangle faces of our mesh
     for (int i = 0; i < g_Mesh.numFaces; ++i)
@@ -402,10 +489,15 @@ void Update(void)
         };
 
         // multiply the world matrix by each original vertex
-        MatrixMulVec4(&worldMatrix, transVertices[0], &transVertices[0]);
-        MatrixMulVec4(&worldMatrix, transVertices[1], &transVertices[1]);
-        MatrixMulVec4(&worldMatrix, transVertices[2], &transVertices[2]);
+        MatrixMulVec4(&g_WorldMatrix, transVertices[0], &transVertices[0]);
+        MatrixMulVec4(&g_WorldMatrix, transVertices[1], &transVertices[1]);
+        MatrixMulVec4(&g_WorldMatrix, transVertices[2], &transVertices[2]);
 
+        // multiply the view matrix by the vector to transform the scene to camera space
+        MatrixMulVec4(&g_ViewMatrix, transVertices[0], &transVertices[0]);
+        MatrixMulVec4(&g_ViewMatrix, transVertices[1], &transVertices[1]);
+        MatrixMulVec4(&g_ViewMatrix, transVertices[2], &transVertices[2]);
+        
         // ------------------------------------------------
 
         //
@@ -423,15 +515,14 @@ void Update(void)
         Vec3Normalize(&vecAC);
 
         // compute the face normal vector
-        Vec3 normal = Vec3Cross(vecAB, vecAC);
+        Vec3 normal = Vec3Cross(vecAB, vecAC); 
 
         // normalize the face normal vector
         Vec3Normalize(&normal);
         
         // find the camera ray vector (pointA => camera_pos)
-        Vec3 cameraRay = Vec3Sub(g_CameraPos, vecA);
-
-        //Vec3Normalize(&cameraRay);
+        Vec3 origin = { 0, 0, 0 };
+        Vec3 cameraRay = Vec3Sub(origin, vecA);
 
         // take the dot product btw the normal and the camera ray;
         // and if this dot prod is < 0, then we don't display the face
@@ -477,23 +568,15 @@ void Update(void)
         projTriangle.texCoords[0] = face->aUV;
         projTriangle.texCoords[1] = face->bUV;
         projTriangle.texCoords[2] = face->cUV;
-#if 0
-        // calculate the light intensity based on face normal and light direction
-        float lightIntensityFactor = -Vec3Dot(normal, g_LightDir.direction);
-        
-        // calculate the triangle color based on the light angle
-        projTriangle.color = LightApplyIntensity(
-            g_Mesh.faces[i].color, 
-            lightIntensityFactor);
-#endif
+
         projTriangle.color = g_Mesh.faces[i].color;
 
         // calculate the light intensity based on face normal and light direction
         projTriangle.lightIntensity = -Vec3Dot(normal, g_LightDir.direction);
      
         // save the projected triangle in the arr of triangles to render
-        g_TrianglesToRender[g_NumFacesToRender] = projTriangle;
-        g_NumFacesToRender++;
+        g_TrianglesToRender[g_NumTrianglesToRender] = projTriangle;
+        g_NumTrianglesToRender++;
     }
 }
 
@@ -564,8 +647,7 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
         }      
     }
 
-
-    // draw vertices and wireframe
+    // draw vertices
     if (g_RenderMethod == RENDER_WIRE_VERTEX)
     {
         for (int i = 0; i < numTriangles; ++i)
@@ -576,8 +658,7 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
             DrawRect(p[2].x, p[2].y, 3, 3, red);   // vertex C
      
         }
-   }
-
+    }
 }
 
 ///////////////////////////////////////////////////////////
@@ -589,9 +670,8 @@ void Render(void)
     // draw the background grid (grey dots)
     DrawGrid();
 
-    // loop all projected triangles  and render them
-    //const int numTriangles = ArrayLength(g_TrianglesToRender);
-    RenderTriangles(g_TrianglesToRender, g_NumFacesToRender);
+    // loop all projected triangles and render them
+    RenderTriangles(g_TrianglesToRender, g_NumTrianglesToRender);
 
     RenderColorBuffer();
     ClearColorBuffer(0xFF000000);  // ABGR black

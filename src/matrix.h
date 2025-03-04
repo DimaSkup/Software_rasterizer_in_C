@@ -37,6 +37,7 @@ void MatrixTranslation(const float tx, const float ty, const float tz, Matrix* o
 void MatrixRotationX(const float angle, Matrix* outMat);
 void MatrixRotationY(const float angle, Matrix* outMat);
 void MatrixRotationZ(const float angle, Matrix* outMat);
+Matrix MatrixRotationAxis(const Vec3 axis, const float angleInRad);
 
 void   MatrixMulVec4(const Matrix* m, const Vec4 v, Vec4* outVec);
 Matrix MatrixMulMatrix(const Matrix* m1, const Matrix* m2);
@@ -54,5 +55,6 @@ void MatrixMulVec4Project(
     const Vec4 origVec,
     Vec4* projectedVec);
 
+void MatrixView(const Vec3 eye, const Vec3 target, const Vec3 up, Matrix* pOutMatrix);
 
 #endif

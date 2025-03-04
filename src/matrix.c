@@ -147,6 +147,27 @@ void MatrixRotationZ(const float angle, Matrix* outMat)
     };
 }
 
+///////////////////////////////////////////////////////////
+
+Matrix MatrixRotationAxis(const Vec3 u, const float theta)
+{
+    // return a rotation matrix by angle theta and the axis u;
+    // NOTE: axis must be normalized
+
+    const float s = sinf(theta);
+    const float c = cosf(theta);
+    const float sub = 1 - c;
+
+    Matrix R = 
+    {
+        u.x*u.x * sub + c,     u.x*u.y * sub - u.z*s, u.x*u.z * sub + u.y*s, 0,
+        u.x*u.y * sub + u.z*s, u.y*u.y * sub + c,     u.y*u.z * sub - u.x*s, 0,
+        u.x*u.z * sub - u.y*s, u.y*u.z * sub + u.x*s, u.z*u.z * sub + c,     0,
+        0, 0, 0, 1
+    };
+
+    return R;
+}
 
 
 // ==================================================================
@@ -255,4 +276,35 @@ void MatrixMulVec4Project(
         projVec->y *= invZ;
         projVec->z *= invZ;
     }    
+}
+
+///////////////////////////////////////////////////////////
+
+void MatrixView(
+    const Vec3 eye, 
+    const Vec3 target, 
+    const Vec3 up, 
+    Matrix* pOutMatrix)
+{
+    // compute the forward (z), right(x), and up (y) vectors
+    Vec3 z = Vec3Sub(target, eye);
+    Vec3Normalize(&z);
+
+    Vec3 x = Vec3Cross(up, z);
+    Vec3Normalize(&x);
+
+    Vec3 y = Vec3Cross(z, x);
+
+
+    // | x.x   x.y   x.z   -dot(x,eye) |
+    // | y.x   y.y   y.z   -dot(y,eye) |
+    // | z.x   z.y   z.z   -dot(z,eye) |
+    // |   0     0     0             1 |
+    *pOutMatrix = (Matrix)
+    {
+        x.x, x.y, x.z, -Vec3Dot(x, eye),
+        y.x, y.y, y.z, -Vec3Dot(y, eye),
+        z.x, z.y, z.z, -Vec3Dot(z, eye),
+          0,   0,   0,                1
+    };
 }

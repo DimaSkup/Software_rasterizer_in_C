@@ -65,80 +65,6 @@ void BarycentricWeights(
     *gamma = 1.0f - *alpha - *beta;
 }
 
-//===================================================================
-// draw a filled triangle with a flat bottom
-//===================================================================
-/* 
-           (x0,y0) 
-             / \
-            /   \
-           /     \
-          /       \
-         /         \
-     (x1,y1)------(x2,y2) 
-*/
-//===================================================================
-void FillFlatBottomTriangle(
-    const int x0, const int y0,
-    const int x1, const int y1,
-    const int x2, const int y2,
-    const u32 color)
-{
-    // find the two slopes (from p0->p1 and p0->p2)
-    float invSlope1 = (float)(x1 - x0) / (y1 - y0);
-    float invSlope2 = (float)(x2 - x0) / (y2 - y0); 
-
-    // start x_start and x_end from the top vertex (x0,y0)
-    float xStart = x0;
-    float xEnd = x0;
-
-    // loop all the scanlines from top to bottom
-    for (int y = y0; y <= y2; ++y)
-    {
-        DrawLine(xStart, y, xEnd, y, color);
-
-        xStart += invSlope1;
-        xEnd += invSlope2;           
-    }
-}
-
-//===================================================================
-// draw a filled triangle with a flat top
-//===================================================================
-/*
-     (x0,y0)------(x1,y1)
-         \         /
-          \       /
-           \     /
-            \   /
-             \ /
-           (x2,y2)
-*/
-//===================================================================
-void FillFlatTopTriangle(
-    const int x0, const int y0,
-    const int x1, const int y1,
-    const int x2, const int y2,
-    const u32 color)
-{
-    // find the two slopes (from p2->p0 and p2->p1)
-    float invSlope1 = (float)(x2 - x0) / (y2 - y0);
-    float invSlope2 = (float)(x2 - x1) / (y2 - y1);
-
-    // start x_start and x_end from the bottom vertex (x2,y2)
-    float xStart = x2;
-    float xEnd = x2;
-
-    // loop all the scanlines from bottom to top
-    for (int y = y2; y > y0; --y)
-    {
-        DrawLine(xStart, y, xEnd, y, color);
-        
-        xStart -= invSlope1;
-        xEnd -= invSlope2;
-    }
-}
-
 ///////////////////////////////////////////////////////////
 
 void DrawDepthLine(
@@ -279,6 +205,7 @@ void DrawFilledTriangle(
             if (xEnd < xStart)
                 SWAPI(xStart, xEnd);
 
+            // draw a colored line where each pixel has its own depth
             DrawDepthLine(
                a, b, c,
                ac,
@@ -312,6 +239,7 @@ void DrawFilledTriangle(
             if (xEnd < xStart)
                 SWAPI(xStart, xEnd);
 
+            // draw a colored line where each pixel has its own depth
             DrawDepthLine(
                a, b, c,
                ac,
@@ -324,38 +252,11 @@ void DrawFilledTriangle(
                color);
         }
     }
-
-
-#if 0
-    // avoid division by zero (when delta_y == 0)
-    if (y1 == y2)
-    {
-        // we can simple draw the flat-bottom triangle and go out
-        FillFlatBottomTriangle(x0, y0, x1, y1, x2, y2, color);
-    }
-    else if (y0 == y1)
-    {
-        // we can simple draw the flat-top triangle and go out
-        FillFlatTopTriangle(x0, y0, x1, y1, x2, y2, color);
-    }
-    // a common case
-    else
-    {
-        // calculate the new vertex (Mx,My) using triangle similarity
-        int My = y1;
-        int Mx = x0 + ((float)(x2-x0)*(y1-y0)) / (float)(y2-y0);
-
-        // draw flat-bottom triangle
-        FillFlatBottomTriangle(x0, y0, x1, y1, Mx, My, color);
-
-        // draw flat-top triangle
-        FillFlatTopTriangle(x1, y1, Mx, My, x2, y2, color);
-    }
-#endif
 }
 
+
 // ==================================================================
-// Function to draw the textured pixel at pos X and Y using interpolation
+// Function to draw the textured pixels at pos X and Y using interpolation
 // ==================================================================
 void DrawTexelLine(
     const Vec2Int a,   // point A

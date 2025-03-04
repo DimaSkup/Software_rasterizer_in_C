@@ -57,17 +57,17 @@ void SortTriangles(
 
 
 void DrawTexelLine(
-    const Vec2Int a,   // point A
-    const Vec2Int b,   // point B
-    const Vec2Int c,   // point C
+    const Vec2Int a,            // point A
+    const Vec2Int b,            // point B
+    const Vec2Int c,            // point C
     const Vec2Int ac,
     const Tex2 texA,
     const Tex2 texB,
     const Tex2 texC,
     const float invArea,
-    const float w0,
-    const float w1, 
-    const float w2,
+    const float w0,             // w-component of point A
+    const float w1,             // w-component of point B
+    const float w2,             // w-component of point C
     const float lightIntensity,
     const int xStart,
     const int xEnd,
