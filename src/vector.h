@@ -29,7 +29,7 @@ typedef struct
 // Vector 2D functions
 // ==================================================================
 
-void Vec2Init(Vec2* v, const float x, const float y);
+Vec2 Vec2Init(const float x, const float y);
 
 // vec2 add/sub/mul
 Vec2 Vec2Add(const Vec2 a, const Vec2 b); 
@@ -46,7 +46,7 @@ void Vec2Normalize(Vec2* v);
 // Vector 3D functions
 // ==================================================================
 
-void Vec3Init(Vec3* v, const float x, const float y, const float z);
+Vec3 Vec3Init(const float x, const float y, const float z);
 
 // vec3 add/sub/mul
 Vec3 Vec3Add(const Vec3 a, const Vec3 b);
@@ -71,5 +71,11 @@ void Vec3RotateZ(Vec3* v, const float angle);
 // ==================================================================
 Vec4 Vec4FromVec3(const Vec3* v);
 Vec3 Vec3FromVec4(const Vec4* v);
+
+
+// ==================================================================
+// Math helpers
+// ==================================================================
+Vec3 LerpVec3(const Vec3 p0, const Vec3 p1, const float t);
 
 #endif

@@ -3,13 +3,13 @@
 // Created:     03.02.25 by DimaSkup
 // ==================================================================
 #include "application.h"
-#include "upng.h"
+#include <assert.h>
 
 // ==================================================================
 // initialize global variables
 // ==================================================================
 
-Triangle* g_TrianglesToRender = NULL;
+Triangle g_TrianglesToRender[10000];
 
 bool   g_IsRunning     = false;
 int    g_PrevFrameTime = 0;
@@ -46,84 +46,22 @@ Matrix g_ProjMatrix;
 // ==================================================================
 // implementation of functions
 // ================================================================== 
-void LoadF22(void)
+
+void LoadAsset(const char* fileDataPath, const char* texturePath)
 {
+    assert((fileDataPath != NULL) && (texturePath != NULL) && "invalid input args");
+
     // load mesh data from the file
-    bool result = LoadObjFileData("assets/f22.obj");
+    bool result = LoadObjFileData(fileDataPath);
     if (!result)
     {
-        printf("\nERROR: can't read in .obj file data\n");
+        printf("\nERROR: can't read in .obj file data: %s\n", fileDataPath);
         Shutdown();
         exit(-1);
     }
 
     // load mesh texture
-    LoadPngTextureData("./assets/f22.png");
-    
-    // alloc memory for all the triangles which can be rendered
-    g_TrianglesToRender = (Triangle*)malloc(sizeof(Triangle) * g_Mesh.numFaces);
-
-}
-
-///////////////////////////////////////////////////////////
-
-void LoadF117(void)
-{
-    // load mesh data from the file
-    bool result = LoadObjFileData("assets/f117.obj");
-    if (!result)
-    {
-        printf("\nERROR: can't read in .obj file data\n");
-        Shutdown();
-        exit(-1);
-    }
-
-    // load mesh texture
-    LoadPngTextureData("./assets/f117.png");
-    
-    // alloc memory for all the triangles which can be rendered
-    g_TrianglesToRender = (Triangle*)malloc(sizeof(Triangle) * g_Mesh.numFaces);
-}
-
-///////////////////////////////////////////////////////////
-
-void LoadDrone(void)
-{
-    // load mesh data from the file
-    bool result = LoadObjFileData("assets/drone.obj");
-    if (!result)
-    {
-        printf("\nERROR: can't read in .obj file data\n");
-        Shutdown();
-        exit(-1);
-    }
-
-    // load mesh texture
-    LoadPngTextureData("./assets/drone.png");
-    
-    // alloc memory for all the triangles which can be rendered
-    g_TrianglesToRender = (Triangle*)malloc(sizeof(Triangle) * g_Mesh.numFaces);
-}
-
-///////////////////////////////////////////////////////////
-
-void LoadCrab(void)
-{
-    // load mesh data from the file
-    bool result = LoadObjFileData("assets/crab.obj");
-    if (!result)
-    {
-        printf("\nERROR: can't read in .obj file data\n");
-        Shutdown();
-        exit(-1);
-    }
-
-    // load mesh texture
-    LoadPngTextureData("./assets/crab.png");
-    
-    // alloc memory for all the triangles which can be rendered
-    g_TrianglesToRender = (Triangle*)malloc(sizeof(Triangle) * g_Mesh.numFaces);
-
+    LoadPngTextureData(texturePath);
 }
 
 ///////////////////////////////////////////////////////////
@@ -166,18 +104,27 @@ void Initialize(void)
     g_WndHalfHeight = (g_WindowHeight >> 1);
 
 
-    LoadDrone();
+    LoadAsset("assets/cube.obj", "assets/cube.png");
     g_AssetType = DRONE;
     g_RotationStep.y = 0.005f;
 
     Vec3Normalize(&g_LightDir.direction);
 
     // Initialize the perspective projection matrix
-    float fov         = 1.047197;                 // 60 degrees = PI/3
-    float aspectRatio = (float)g_WindowHeight / (float)g_WindowWidth;
-    float nearZ       = 0.1f;
-    float farZ        = 100.0f;
-    g_ProjMatrix = MatrixInitPerspective(fov, aspectRatio, nearZ, farZ);
+    const float aspectX = (float)g_WindowWidth / (float)g_WindowHeight;                                                  
+    const float aspectY = (float)g_WindowHeight / (float)g_WindowWidth;
+    const float fovY    = M_PIDIV3;
+    const float fovX    = 2.0f * atan(tan(fovY/2) * aspectX);
+    const float nearZ   = 1.0f;
+    const float farZ    = 100.0f;
+    g_ProjMatrix = MatrixInitPerspective(fovY, aspectY, nearZ, farZ);
+
+    // initialize frustum planes with a point and a normal vector
+    InitFrustumPlanes(fovX, fovY, nearZ, farZ);
+
+    // setup mouse stuff
+    SDL_ShowCursor(SDL_DISABLE);
+    SDL_SetRelativeMouseMode(SDL_TRUE);   // to make able mouse cursor move past the window's border
 
     printf("Application is initialized\n");
 }
@@ -263,7 +210,7 @@ void ProcessKeydown(const int keycode)
             if (g_AssetType != DRONE)
             {            
                 FreeAssetResources();
-                LoadDrone();
+                LoadAsset("assets/drone.obj", "assets/drone.png");
                 g_AssetType = DRONE;
                 g_Mesh.rotation.x = 0;
                 g_Mesh.rotation.y = 0;
@@ -278,7 +225,7 @@ void ProcessKeydown(const int keycode)
             if (g_AssetType != CRAB)
             {
                 FreeAssetResources();
-                LoadCrab();
+                LoadAsset("assets/crab.obj", "assets/crab.png");
                 g_AssetType = CRAB;
                 g_Mesh.rotation.x = 0;
                 g_Mesh.rotation.y = 0;
@@ -293,13 +240,12 @@ void ProcessKeydown(const int keycode)
             if (g_AssetType != F22)
             {
                 FreeAssetResources();
-                LoadF22();
+                LoadAsset("assets/f22.obj", "assets/f22.png");
                 g_AssetType = F22;
                 g_Mesh.rotation.x = -1.59f;
                 g_Mesh.rotation.y = 0;
                 g_RotationStep.x = 0.5f;
                 g_RotationStep.y = 0.0f;
-
             }
             break;
         }
@@ -309,13 +255,12 @@ void ProcessKeydown(const int keycode)
             if (g_AssetType != F117)
             {
                 FreeAssetResources();
-                LoadF117();
+                LoadAsset("assets/f117.obj", "assets/f117.png");
                 g_AssetType = F117;
                 g_Mesh.rotation.x = -1.59f;
                 g_Mesh.rotation.y = 0;
                 g_RotationStep.x = 0.5f;
                 g_RotationStep.y = 0.0f;
-
             }
             break;
         }
@@ -383,17 +328,7 @@ void ProcessInput(void)
     else if (keys[SDL_SCANCODE_SPACE])
         g_Camera.position.y += cameraMoveSpeed;
 
-    if (keys[SDL_SCANCODE_UP])
-        g_Camera.pitch -= 1.0f * g_DeltaTime;
-    else if (keys[SDL_SCANCODE_DOWN])
-        g_Camera.pitch += 1.0f * g_DeltaTime;
-
-    if (keys[SDL_SCANCODE_LEFT])
-        g_Camera.yaw -= 1.0f * g_DeltaTime;
-    else if (keys[SDL_SCANCODE_RIGHT])
-        g_Camera.yaw += 1.0f * g_DeltaTime; 
-
-
+    // ------------------------------------------
 
     SDL_Event event;
 
@@ -406,13 +341,22 @@ void ProcessInput(void)
                 g_IsRunning = false;
                 break;
             }
+            case SDL_MOUSEMOTION:
+            {
+                static int deltaX = 0;
+                static int deltaY = 0;
+
+                SDL_GetRelativeMouseState(&deltaX, &deltaY);
+                ComputeCameraAngles(deltaX, deltaY, g_DeltaTime);
+
+                break;
+            }
             case SDL_KEYDOWN:
             {
                 ProcessKeydown(event.key.keysym.sym);
                 break;
             }      
         }
-
     }
 }
 
@@ -536,48 +480,65 @@ void Update(void)
         }
 
         // ------------------------------------------------
-
-        //
-        // create a projected 2D triangle which will be rendered
-        //
-        Triangle projTriangle;           
-
-        // loop all three vertices to perform projection
-        for (int j = 0; j < 3; ++j)
-        {
-            // project the current vertex 
-            MatrixMulVec4Project(
-                &g_ProjMatrix,
-                transVertices[j],
-                &projTriangle.points[j]);
-
-            // scale into the view
-            projTriangle.points[j].x *= g_WndHalfWidth;
-            projTriangle.points[j].y *= g_WndHalfHeight;
-
-            // invert the Y values to account for flipped screen Y coordinate
-            projTriangle.points[j].y *= -1;
-
-            // translate the projected points to the middle of the screen
-            projTriangle.points[j].x += g_WndHalfWidth;
-            projTriangle.points[j].y += g_WndHalfHeight;
-        }
-
-        // copy the textures coords into the projected triangle
+        
         const Face* face = g_Mesh.faces + i;
-        projTriangle.texCoords[0] = face->aUV;
-        projTriangle.texCoords[1] = face->bUV;
-        projTriangle.texCoords[2] = face->cUV;
 
-        projTriangle.color = g_Mesh.faces[i].color;
+        // create a polygon from the original transformed triangle to be clipped
+        Polygon polygon = CreatePolygonFromTriangle(
+            transVertices[0],
+            transVertices[1],
+            transVertices[2],
+            face->aUV,
+            face->bUV,
+            face->cUV);
+        
+        // clip the polygon and return a new polygon with potential new vertices
+        ClipPolygon(&polygon);
 
-        // calculate the light intensity based on face normal and light direction
-        projTriangle.lightIntensity = -Vec3Dot(normal, g_LightDir.direction);
-     
-        // save the projected triangle in the arr of triangles to render
-        g_TrianglesToRender[g_NumTrianglesToRender] = projTriangle;
-        g_NumTrianglesToRender++;
-    }
+        // after clipping we break the polygon into triangles
+        Triangle trianglesAfterClipping[MAX_NUM_POLYGON_TRIANGLES];
+        int numTrianglesAfterClipping = 0;
+
+        CreateTrianglesFromPolygon(&polygon, trianglesAfterClipping, &numTrianglesAfterClipping);
+
+        // loop all the assembled triangles after clipping
+        for (int t = 0; t < numTrianglesAfterClipping; ++t)
+        {
+            // create a projected 2D triangle which will be rendered
+            Triangle triangleToRender = trianglesAfterClipping[t];           
+
+            // loop all three vertices to perform projection
+            for (int j = 0; j < 3; ++j)
+            {
+                // project the current vertex 
+                MatrixMulVec4Project(
+                    &g_ProjMatrix, 
+                    triangleToRender.points[j], 
+                    &triangleToRender.points[j]);
+
+                // scale into the view
+                triangleToRender.points[j].x *= g_WndHalfWidth;
+                triangleToRender.points[j].y *= g_WndHalfHeight;
+
+                // invert the Y values to account for flipped screen Y coordinate
+                triangleToRender.points[j].y *= -1;
+
+                // translate the projected points to the middle of the screen
+                triangleToRender.points[j].x += g_WndHalfWidth;
+                triangleToRender.points[j].y += g_WndHalfHeight;
+            }
+
+            triangleToRender.color = g_Mesh.faces[i].color;
+
+            // calculate the light intensity based on face normal and light direction
+            triangleToRender.lightIntensity = -Vec3Dot(normal, g_LightDir.direction);
+         
+            // save the projected triangle in the arr of triangles to render
+            g_TrianglesToRender[g_NumTrianglesToRender] = triangleToRender;
+            g_NumTrianglesToRender++;
+
+        } // end loop through triangles in mesh
+    } // end loop through meshes
 }
 
 ///////////////////////////////////////////////////////////
@@ -689,7 +650,6 @@ void FreeAssetResources(void)
     ArrayFree((void**)&g_Mesh.faces);
     ArrayFree((void**)&g_Mesh.normals);
     ArrayFree((void**)&g_Mesh.vertices);
-    free(g_TrianglesToRender);    
 }
 
 ///////////////////////////////////////////////////////////

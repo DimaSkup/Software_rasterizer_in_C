@@ -21,5 +21,9 @@ typedef struct
 
 extern Camera g_Camera;
 
+void ComputeCameraAngles(
+    const int deltaX, 
+    const int deltaY, 
+    const float deltaTime);
 
 #endif

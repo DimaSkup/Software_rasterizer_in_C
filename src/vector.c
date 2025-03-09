@@ -6,10 +6,10 @@
 // Implementations Vector 2D functions
 // ==================================================================
 
-void Vec2Init(Vec2* v, const float x, const float y)
+Vec2 Vec2Init(const float x, const float y)
 {
-    v->x = x;
-    v->y = y;
+    Vec2 v = { x, y };
+    return v;
 }
 
 void Vec2MulScalar(Vec2* v, const float scalar)
@@ -66,15 +66,15 @@ float Vec2Dot(const Vec2 a, const Vec2 b)
 }
 
 
+
 // ==================================================================
 // Implementations Vector 3D functions
 // ==================================================================
 
-void Vec3Init(Vec3* v, const float x, const float y, const float z)
+Vec3 Vec3Init(const float x, const float y, const float z)
 {
-    v->x = x; 
-    v->y = y;
-    v->z = z;
+    Vec3 v = { x,y,z };
+    return v;
 }
 
 ///////////////////////////////////////////////////////////
@@ -200,6 +200,25 @@ Vec3 Vec3FromVec4(const Vec4* v)
 {
     Vec3 vec = { v->x, v->y, v->z };
     return vec;
+}
+
+
+// ==================================================================
+// Math helpers
+// ==================================================================
+Vec3 LerpVec3(
+    const Vec3 p0, 
+    const Vec3 p1, 
+    const float t)
+{
+    // linear interpolation: P = P0 + t(P1 - P0):
+    // p0 - start point
+    // p1 - end point
+    // t  - parameter
+ 
+    Vec3 p = Vec3Add(p0, Vec3Mul(Vec3Sub(p1, p0), t));   // p = p0 + vt
+    
+    return p;                                           
 }
 
 

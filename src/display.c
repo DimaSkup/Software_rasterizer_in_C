@@ -1,11 +1,9 @@
 #include "display.h"
-
+#include "math_common.h"
 
 // ==========================
 // definitions
 // ==========================
-float PI = 3.141592653f;
-
 SDL_Window*   g_pWindow = NULL;
 SDL_Renderer* g_pRenderer = NULL;
 SDL_Texture*  g_pColorBufferTexture = NULL;
@@ -34,6 +32,7 @@ bool InitializeWindow(void)
     g_WindowWidth  = displayMode.w;
     g_WindowHeight = displayMode.h;
 
+#if 1
     //g_WindowWidth = 800;
     //g_WindowHeight = 600;
 
@@ -61,7 +60,7 @@ bool InitializeWindow(void)
     }
 
     SDL_SetWindowFullscreen(g_pWindow, SDL_WINDOW_FULLSCREEN);
-    
+#endif 
     // we successfully initialized SDL stuff
     return true;
 }
@@ -198,8 +197,7 @@ void DrawRect(int x, int y, int width, int height, Color color)
     {
         for (int posX = x; posX < (x + width); ++posX)
         {
-            DrawPixel(posX, posY, color);
-            //colorBuffer[windowWidth * posY + posX] = color;
+            g_ColorBuffer[g_WindowWidth * posY + posX] = color;
         }
     }
 }
@@ -208,9 +206,9 @@ void DrawRect(int x, int y, int width, int height, Color color)
 
 void DrawCircle(int x, int y, int radius, Color color)
 {
-    const float radianStep = PI / 180.0f;    
+    const float radianStep = 0.0175f;    
 
-    for (float rad = 0.0f; rad < 2*PI; rad += radianStep)
+    for (float rad = 0.0f; rad < M_2PI; rad += radianStep)
     {
         int rx = (int)(cosf(rad) * radius) + x;
         int ry = (int)(sinf(rad) * radius) + y;

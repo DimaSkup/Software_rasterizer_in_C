@@ -7,6 +7,7 @@
 // ==================================================================
 #include "texture.h"
 #include <stdio.h>
+#include <assert.h>
 
 int       g_TextureWidth  = 64;
 int       g_TextureHeight = 64;
@@ -16,8 +17,10 @@ upng_t*   g_PngTexture = NULL;
 
 ///////////////////////////////////////////////////////////
 
-void LoadPngTextureData(char* filename)
+void LoadPngTextureData(const char* filename)
 {
+    assert((filename != NULL) && "invalid input args");
+
     // load a png texture image from the file by filename
     g_PngTexture = upng_new_from_file(filename);
     if (g_PngTexture != NULL)

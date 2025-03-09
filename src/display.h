@@ -14,7 +14,6 @@
 // ============================
 typedef uint32_t u32;
 typedef uint32_t Color;
-extern float PI;
 
 extern enum CullMethod
 {

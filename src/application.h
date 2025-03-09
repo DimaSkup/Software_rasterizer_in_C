@@ -13,11 +13,14 @@
 #include "triangle.h"
 #include "light.h"
 #include "texture.h"
+#include "math_common.h"
+#include "clipping.h"
+#include "upng.h"
 
 // ==================================================================
 // array of triangles that should be rendered frame by frame
 // ==================================================================
-extern Triangle* g_TrianglesToRender;
+extern Triangle g_TrianglesToRender[10000];
 
 
 // ==================================================================

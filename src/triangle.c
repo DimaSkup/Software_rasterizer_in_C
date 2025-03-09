@@ -17,7 +17,8 @@ void ComputeReciprocalW(
     float* w1,               // ... of point B
     float* w2)               // ... of point C
 {
-    // compute and write back reciprocal W for each input point
+    // compute and write back reciprocal W for each input point:
+    // (using this we will perform perspective division)
     *w0 = 1.0f / *w0;
     *w1 = 1.0f / *w1;
     *w2 = 1.0f / *w2;

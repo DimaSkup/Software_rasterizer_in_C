@@ -23,6 +23,6 @@ extern int g_TextureHeight;
 extern upng_t* g_PngTexture;
 extern uint32_t* g_MeshTexture;
 
-void LoadPngTextureData(char* filename);
+void LoadPngTextureData(const char* filename);
 
 #endif
