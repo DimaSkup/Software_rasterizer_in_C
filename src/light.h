@@ -23,15 +23,13 @@ typedef uint32_t u32;
 
 
 //
-// Globals
-//
-extern Light g_LightDir;   // directed light source (sun)
-
-
-//
 // Functions declarations
 //
-u32 LightApplyIntensity(const u32 origColor, float lightMagnitude);
+u32 LightApplyIntensity(
+    const u32 origColor, 
+    const float lightMagnitude);
 
+void InitDirectedLight(const Vec3 direction);
+Vec3 GetDirectedLightDirection(void);
 
 #endif

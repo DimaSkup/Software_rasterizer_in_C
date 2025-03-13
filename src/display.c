@@ -4,19 +4,25 @@
 // ==========================
 // definitions
 // ==========================
-SDL_Window*   g_pWindow = NULL;
-SDL_Renderer* g_pRenderer = NULL;
-SDL_Texture*  g_pColorBufferTexture = NULL;
+static enum CullMethod   g_CullMethod   = 0;
+static enum RenderMethod g_RenderMethod = 0;
 
-int    g_WindowWidth  = 800;
-int    g_WindowHeight = 600;
-u32*   g_ColorBuffer = NULL;
-float* g_ZBuffer = NULL;
+static SDL_Window*   g_pWindow = NULL;
+static SDL_Renderer* g_pRenderer = NULL;
+static SDL_Texture*  g_pColorBufferTexture = NULL;
 
-	
-// ============================
-// implementations
-// ============================
+const int     g_DefaultWindowWidth  = 320;
+const int     g_DefaultWindowHeight = 180;
+static int    g_WindowWidth  = g_DefaultWindowWidth;
+static int    g_WindowHeight = g_DefaultWindowHeight;
+static int    g_WindowArea   = g_DefaultWindowWidth * g_DefaultWindowHeight;
+static u32*   g_ColorBuffer  = NULL;
+static float* g_ZBuffer      = NULL;
+
+
+// ==================================================================
+// implementations of functions
+// ==================================================================
 bool InitializeWindow(void) 
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
@@ -29,20 +35,22 @@ bool InitializeWindow(void)
     SDL_DisplayMode displayMode;
     SDL_GetCurrentDisplayMode(0, &displayMode);
 
-    g_WindowWidth  = displayMode.w;
-    g_WindowHeight = displayMode.h;
+    const int fullscreenWidth  = displayMode.w;
+    const int fullscreenHeight = displayMode.h;
 
+    //g_WindowArea = g_WindowWidth * g_WindowHeight;
 #if 1
-    //g_WindowWidth = 800;
-    //g_WindowHeight = 600;
+    // if we want to use "old school" style
+    g_WindowWidth  = fullscreenWidth / 5;
+    g_WindowHeight = fullscreenHeight / 5;
 
     // create a SDL window
     g_pWindow = SDL_CreateWindow(
         NULL, 
         SDL_WINDOWPOS_CENTERED, 
         SDL_WINDOWPOS_CENTERED,
-        g_WindowWidth,
-        g_WindowHeight,
+        fullscreenWidth,
+        fullscreenHeight,
         SDL_WINDOW_BORDERLESS);
 
     if (!g_pWindow)
@@ -60,18 +68,98 @@ bool InitializeWindow(void)
     }
 
     SDL_SetWindowFullscreen(g_pWindow, SDL_WINDOW_FULLSCREEN);
-#endif 
+#endif
+
+    // allocate the required memory in bytes to hold the color buffer
+    g_ColorBuffer = (u32*)malloc(sizeof(u32) * g_WindowWidth * g_WindowHeight);
+
+    // ... and the z-buffer
+    g_ZBuffer = (float*)malloc(sizeof(float) * g_WindowWidth * g_WindowHeight);
+
+    ClearZBuffer();
+
+    // creating a SDL texture that is used to display the color buffer
+    g_pColorBufferTexture = SDL_CreateTexture(
+        g_pRenderer,
+        SDL_PIXELFORMAT_RGBA32,
+        SDL_TEXTUREACCESS_STREAMING,
+        g_WindowWidth,
+        g_WindowHeight);    
+
     // we successfully initialized SDL stuff
     return true;
 }
 
 ///////////////////////////////////////////////////////////
 
+int GetWindowWidth(void)  { return g_WindowWidth; }
+int GetWindowHeight(void) { return g_WindowHeight; }
+
+///////////////////////////////////////////////////////////
+
+void SetRenderMethod(const int method) { g_RenderMethod = method; }
+void SetCullMethod  (const int method) { g_CullMethod = method; }
+
+bool IsCullBackface(void) { return g_CullMethod == CULL_BACK; }
+
+///////////////////////////////////////////////////////////
+
+bool ShouldRenderFilledTriangles(void)
+{
+    return 
+        g_RenderMethod == RENDER_FILL_SOLID || 
+        g_RenderMethod == RENDER_FILL_SOLID_WIRE;
+}
+
+///////////////////////////////////////////////////////////
+
+bool ShouldRenderTexturedTriangles(void)
+{
+    return
+        g_RenderMethod == RENDER_TEXTURED || 
+        g_RenderMethod == RENDER_TEXTURED_WIRE;
+}
+
+///////////////////////////////////////////////////////////
+
+bool ShouldRenderWireframe(void)
+{
+    return
+        g_RenderMethod == RENDER_WIRE || 
+        g_RenderMethod == RENDER_WIRE_VERTEX ||
+        g_RenderMethod == RENDER_FILL_SOLID_WIRE ||
+        g_RenderMethod == RENDER_TEXTURED_WIRE;
+}
+
+///////////////////////////////////////////////////////////
+
+bool ShouldRenderWireVertices(void)
+{
+    return g_RenderMethod == RENDER_WIRE_VERTEX;
+}
+
+///////////////////////////////////////////////////////////
+
 void DrawPixel(int x, int y, Color color) 
 {
+    // if we have wrong input args we just do nothing
+    if ((x < 0) || (x >= g_WindowWidth) || (y < 0) || (y >= g_WindowHeight))
+        return;
+
     // set a pixel color at position (x,y) on the screen
-    if (x >= 0 && x < g_WindowWidth && y >= 0 && y < g_WindowHeight)
-        g_ColorBuffer[y * g_WindowWidth + x] = color;
+    g_ColorBuffer[y * g_WindowWidth + x] = color;
+}
+
+///////////////////////////////////////////////////////////
+
+void DrawPixelByIdx(const int pixelIdx, Color color)
+{
+    // set a color for a particular pixel by input index
+
+    if (pixelIdx < 0 || (pixelIdx >= g_WindowArea))
+        return;
+
+    g_ColorBuffer[pixelIdx] = color;
 }
 
 ///////////////////////////////////////////////////////////
@@ -232,6 +320,8 @@ void RenderColorBuffer(void)
         g_pColorBufferTexture,
         NULL,
         NULL);
+
+    SDL_RenderPresent(g_pRenderer);
 }
 
 ///////////////////////////////////////////////////////////
@@ -239,7 +329,7 @@ void RenderColorBuffer(void)
 void ClearColorBuffer(const Color color)
 {
     // set the entire color buffer with a specific color value
-    for (int i = 0; i < (g_WindowWidth * g_WindowHeight); ++i)
+    for (int i = 0; i < g_WindowArea; ++i)
         g_ColorBuffer[i] = color;
 }
 
@@ -248,7 +338,7 @@ void ClearColorBuffer(const Color color)
 void ClearZBuffer(void)
 {
     // set the entire z-buffer with a specific value
-    for (int i = 0; i < (g_WindowWidth * g_WindowHeight); ++i)
+    for (int i = 0; i < g_WindowArea; ++i)
         g_ZBuffer[i] = 1.0f;
 }
 
@@ -256,6 +346,9 @@ void ClearZBuffer(void)
 
 void DestroyWindow()
 {
+    free(g_ColorBuffer);
+    free(g_ZBuffer);
+
     SDL_DestroyRenderer(g_pRenderer);
     SDL_DestroyWindow(g_pWindow);
     SDL_Quit();
@@ -263,4 +356,53 @@ void DestroyWindow()
 
 //////////////////////////////////////////////////////////
 
+u32 GetColorBufferByPixelIdx(const int pixelIdx)
+{
+    if (pixelIdx < 0 || (pixelIdx >= g_WindowArea))
+        return 0xFFFFFFFF;
+
+    return g_ColorBuffer[pixelIdx];
+}
+
+//////////////////////////////////////////////////////////
+
+float GetZBufferAt(const int x, const int y)
+{
+    if (x < 0 || x >= g_WindowWidth || y < 0 || y >= g_WindowHeight)
+        return 1.0f;
+
+    return g_ZBuffer[(g_WindowWidth * y) + x];
+}
+
+//////////////////////////////////////////////////////////
+
+float GetZBufferByPixelIdx(const int pixelIdx)
+{
+    if (pixelIdx < 0 || (pixelIdx >= g_WindowArea))
+        return 1.0f;
+
+    return g_ZBuffer[pixelIdx];
+}
+
+//////////////////////////////////////////////////////////
+
+void SetZBufferAt(const int x, const int y, const float value)
+{
+    if (x < 0 || x >= g_WindowWidth || y < 0 || y >= g_WindowHeight)
+        return;
+
+    g_ZBuffer[(g_WindowWidth * y) + x] = value;
+}
+
+//////////////////////////////////////////////////////////
+
+void SetZBufferByPixelIdx(const int pixelIdx, const float value)
+{
+    if (pixelIdx < 0 || (pixelIdx >= g_WindowArea))
+        return;
+
+    g_ZBuffer[pixelIdx] = value;
+}
+
+//////////////////////////////////////////////////////////
 

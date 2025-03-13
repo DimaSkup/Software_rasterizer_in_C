@@ -88,7 +88,7 @@ void DrawDepthLine(
     float gamma = 0.0f;
 
     // compute index of the pixel into z-buffer
-    int pixelIdx = g_WindowWidth * y + xStart;
+    int pixelIdx = GetWindowWidth() * y + xStart;
 
     // go through each pixel in horizontal line
     for (int x = xStart; x < xEnd; x++, pixelIdx++)
@@ -108,14 +108,14 @@ void DrawDepthLine(
 
         // immediately test if the pixel is closer or farther from the camera so we will be able to skip unnecessary computations (in case if farther)
         // NOTE: (1.0f - interpolated_recip_w): adjust 1/w so the pixels that are closer to the camera have smaller values (because bigger w gives us smaller 1/w so we failing z-test)    
-        if (depth < g_ZBuffer[pixelIdx])
+        if (depth < GetZBufferByPixelIdx(pixelIdx))
         {
             // update the z-buffer value with the 1/w of this current pixel
-            g_ZBuffer[pixelIdx] = depth;
+            SetZBufferByPixelIdx(pixelIdx, depth);
             
             const uint32_t pixelColor = LightApplyIntensity(color, lightIntensity);
 
-            g_ColorBuffer[pixelIdx] = pixelColor;
+            DrawPixelByIdx(pixelIdx, pixelColor);
         }
     }
 }
@@ -282,7 +282,7 @@ void DrawTexelLine(
     float gamma = 0.0f;
    
     // compute index of the pixel into z-buffer
-    int pixelIdx = g_WindowWidth * y + xStart;
+    int pixelIdx = GetWindowWidth() * y + xStart;
 
     // go through each pixel in horizontal line
     for (int x = xStart; x < xEnd; x++, pixelIdx++)
@@ -302,10 +302,10 @@ void DrawTexelLine(
 
         // immediately test if the pixel is closer or farther from the camera so we will be able to skip unnecessary computations (in case if farther)
         // NOTE: (1.0f - interpolated_recip_w): adjust 1/w so the pixels that are closer to the camera have smaller values (because bigger w gives us smaller 1/w so we failing z-test)    
-        if (depth < g_ZBuffer[pixelIdx])
+        if (depth < GetZBufferByPixelIdx(pixelIdx))
         {
             // update the z-buffer value with the 1/w of this current pixel
-            g_ZBuffer[pixelIdx] = depth;
+            SetZBufferByPixelIdx(pixelIdx, depth);
 
             // interpolate u/w and v/w coords using barycentric weights and a factor of 1/w
             float interpolatedU = (texA.u * alphaMulRecipW) + (texB.u * betaMulRecipW) + (texC.u * gammaMulRecipW);
@@ -424,8 +424,10 @@ void DrawTexturedTriangle(
 
     if (y1 - y0 != 0)
     { 
-        if (y1 - y0 != 0) invSlope1 = (float)(x1 - x0) / abs(y1 - y0);
-        if (y2 - y0 != 0) invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
+        invSlope1 = (float)(x1 - x0) / abs(y1 - y0);
+
+        if (y2 - y0 != 0) 
+            invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
 
         for (int y = y0; y < y1; y++)
         {
@@ -459,10 +461,11 @@ void DrawTexturedTriangle(
    
     if (y2 - y1 != 0)
     {
-        invSlope1 = 0.0f;
         invSlope2 = 0.0f;
-        if (y2 - y1 != 0) invSlope1 = (float)(x2 - x1) / abs(y2 - y1);
-        if (y2 - y0 != 0) invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
+        invSlope1 = (float)(x2 - x1) / abs(y2 - y1);
+
+        if (y2 - y0 != 0) 
+            invSlope2 = (float)(x2 - x0) / abs(y2 - y0);
 
         for (int y = y1; y <= y2; y++)
         {

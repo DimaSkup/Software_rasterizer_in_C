@@ -31,10 +31,6 @@ extern int    g_PrevFrameTime;
 
 extern Matrix g_ProjMatrix;
 
-extern enum CullMethod   g_CullMethod;
-extern enum RenderMethod g_RenderMethod;
-
-
 // ==================================================================
 // main functions
 // ==================================================================

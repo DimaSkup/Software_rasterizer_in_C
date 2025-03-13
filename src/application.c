@@ -5,6 +5,7 @@
 #include "application.h"
 #include <assert.h>
 
+
 // ==================================================================
 // initialize global variables
 // ==================================================================
@@ -16,9 +17,6 @@ int    g_PrevFrameTime = 0;
 float  g_DeltaTime     = 0;
 
 Vec3   g_RotationStep  = { 0,0,0 };
-
-enum CullMethod   g_CullMethod = CULL_BACK;
-enum RenderMethod g_RenderMethod = RENDER_TEXTURED;
 
 // compute the central pixel pos on the screen
 int g_WndHalfWidth  = 400;
@@ -79,40 +77,26 @@ void Initialize(void)
         exit(-1);
     }
 
+    const int wndWidth  = GetWindowWidth();
+    const int wndHeight = GetWindowHeight();
+
     // initialize render model and culling method
-    g_RenderMethod = RENDER_TEXTURED;
-    g_CullMethod = CULL_BACK;
+    SetRenderMethod(RENDER_TEXTURED);
+    SetCullMethod(CULL_BACK);
 
-    // allocate the required memory in bytes to hold the color buffer
-    g_ColorBuffer = (u32*)malloc(sizeof(u32) * g_WindowWidth * g_WindowHeight);
+    g_WndHalfWidth  = (wndWidth  >> 1);
+    g_WndHalfHeight = (wndHeight >> 1);
 
-    // ... and the z-buffer
-    g_ZBuffer = (float*)malloc(sizeof(float) * g_WindowWidth * g_WindowHeight);
-
-    ClearZBuffer();
-
-    // creating a SDL texture that is used to display the color buffer
-    g_pColorBufferTexture = SDL_CreateTexture(
-        g_pRenderer,
-        SDL_PIXELFORMAT_RGBA32,
-        SDL_TEXTUREACCESS_STREAMING,
-        g_WindowWidth,
-        g_WindowHeight);    
-
-
-    g_WndHalfWidth  = (g_WindowWidth  >> 1);
-    g_WndHalfHeight = (g_WindowHeight >> 1);
-
+    // initialize the scene direction light
+    InitDirectedLight(Vec3Init(0, 0, 1));
 
     LoadAsset("assets/cube.obj", "assets/cube.png");
     g_AssetType = DRONE;
     g_RotationStep.y = 0.005f;
 
-    Vec3Normalize(&g_LightDir.direction);
-
     // Initialize the perspective projection matrix
-    const float aspectX = (float)g_WindowWidth / (float)g_WindowHeight;                                                  
-    const float aspectY = (float)g_WindowHeight / (float)g_WindowWidth;
+    const float aspectX = (float)wndWidth / (float)wndHeight;                                                  
+    const float aspectY = (float)wndHeight / (float)wndWidth;
     const float fovY    = M_PIDIV3;
     const float fovX    = 2.0f * atan(tan(fovY/2) * aspectX);
     const float nearZ   = 1.0f;
@@ -170,37 +154,37 @@ void ProcessKeydown(const int keycode)
         case SDLK_1:
         {
             // render both vertices and wireframe lines
-            g_RenderMethod = RENDER_WIRE_VERTEX;
+            SetRenderMethod(RENDER_WIRE_VERTEX);
             break;
         }
         case SDLK_2:
         {
             // render only wireframe lines
-            g_RenderMethod = RENDER_WIRE;
+            SetRenderMethod(RENDER_WIRE);
             break;
         }
         case SDLK_3:
         {
             // render only solid color of the faces
-            g_RenderMethod = RENDER_FILL_SOLID;
+            SetRenderMethod(RENDER_FILL_SOLID);
             break;
         }
         case SDLK_4:
         {
             // render both filled triangles and wireframe lines
-            g_RenderMethod = RENDER_FILL_SOLID_WIRE;
+            SetRenderMethod(RENDER_FILL_SOLID_WIRE);
             break;
         }
         case SDLK_5:
         {
             // render only textured triangles
-            g_RenderMethod = RENDER_TEXTURED;
+            SetRenderMethod(RENDER_TEXTURED);
             break;
         } 
         case SDLK_6:
         {
             // render both textured and wireframed triangles
-            g_RenderMethod = RENDER_TEXTURED_WIRE;
+            SetRenderMethod(RENDER_TEXTURED_WIRE);
             break;
         }
         case SDLK_7:
@@ -268,13 +252,13 @@ void ProcessKeydown(const int keycode)
         case SDLK_c:
         {
             // enable back-culling
-            g_CullMethod = CULL_BACK;
+            SetCullMethod(CULL_BACK);
             break;
         }
         case SDLK_x:
         {
             // disable back-culling
-            g_CullMethod = CULL_NONE;
+            SetCullMethod(CULL_NONE);
             break;
         }
     }
@@ -288,45 +272,43 @@ void ProcessInput(void)
 
     const uint8_t* keys = SDL_GetKeyboardState(NULL);
 
-    const float cameraMoveSpeed = 3.0f * g_DeltaTime;
+    const float cameraMoveSpeed = GetCameraMovementSpeed() * g_DeltaTime;
 
     // move left(A)/right(D)
     if (keys[SDL_SCANCODE_A])
-    {
-        Vec3 up = {0,1,0};
-        g_Camera.right = Vec3Cross(up, g_Camera.direction);
-        Vec3Normalize(&g_Camera.right);
-
-        g_Camera.velocity = Vec3Mul(g_Camera.right, cameraMoveSpeed);
-        g_Camera.position = Vec3Sub(g_Camera.position, g_Camera.velocity);
+    {    
+        SetCameraForwardVelocity(Vec3Mul(GetCameraRight(), cameraMoveSpeed));
+        SetCameraPosition(Vec3Sub(GetCameraPosition(), GetCameraForwardVelocity()));
     }
     else if (keys[SDL_SCANCODE_D])
     {
-        Vec3 up = {0,1,0};
-        g_Camera.right = Vec3Cross(up, g_Camera.direction);
-        Vec3Normalize(&g_Camera.right);
-
-        g_Camera.velocity = Vec3Mul(g_Camera.right, cameraMoveSpeed);
-        g_Camera.position = Vec3Add(g_Camera.position, g_Camera.velocity);
+        SetCameraForwardVelocity(Vec3Mul(GetCameraRight(), cameraMoveSpeed));
+        SetCameraPosition(Vec3Add(GetCameraPosition(), GetCameraForwardVelocity()));
     }
 
     // move forward(W)/backward(S)
     if (keys[SDL_SCANCODE_S])
     {
-        g_Camera.velocity = Vec3Mul(g_Camera.direction, cameraMoveSpeed);
-        g_Camera.position = Vec3Sub(g_Camera.position, g_Camera.velocity);
+        SetCameraForwardVelocity(Vec3Mul(GetCameraDirection(), cameraMoveSpeed));
+        SetCameraPosition(Vec3Sub(GetCameraPosition(), GetCameraForwardVelocity()));
     }
     else if (keys[SDL_SCANCODE_W])
     {
-        g_Camera.velocity = Vec3Mul(g_Camera.direction, cameraMoveSpeed);
-        g_Camera.position = Vec3Add(g_Camera.position, g_Camera.velocity);
+        SetCameraForwardVelocity(Vec3Mul(GetCameraDirection(), cameraMoveSpeed));
+        SetCameraPosition(Vec3Add(GetCameraPosition(), GetCameraForwardVelocity()));
     }
 
     // move up(space)/down(Z)
     if (keys[SDL_SCANCODE_Z])
-        g_Camera.position.y -= cameraMoveSpeed;
+    {
+        SetCameraForwardVelocity(Vec3Init(0, cameraMoveSpeed, 0));
+        SetCameraPosition(Vec3Sub(GetCameraPosition(), GetCameraForwardVelocity()));
+    }
     else if (keys[SDL_SCANCODE_SPACE])
-        g_Camera.position.y += cameraMoveSpeed;
+    {
+        SetCameraForwardVelocity(Vec3Init(0, cameraMoveSpeed, 0));
+        SetCameraPosition(Vec3Add(GetCameraPosition(), GetCameraForwardVelocity()));
+    }
 
     // ------------------------------------------
 
@@ -347,7 +329,9 @@ void ProcessInput(void)
                 static int deltaY = 0;
 
                 SDL_GetRelativeMouseState(&deltaX, &deltaY);
-                ComputeCameraAngles(deltaX, deltaY, g_DeltaTime);
+
+                RotateCameraYaw(deltaX * g_DeltaTime);
+                RotateCameraPitch(deltaY * g_DeltaTime);
 
                 break;
             }
@@ -382,7 +366,11 @@ void Update(void)
 
     // normalize the directed light vector, if we don't do this
     // we might explode the brightness value of the triangles colors
-    Vec3Normalize(&g_LightDir.direction);
+    //Vec3Normalize(&g_LightDir.direction);
+
+    const Vec3 dirLightDirection = GetDirectedLightDirection();
+
+    const bool isBackfaceCullEnabled = IsCullBackface();
 
     // reset the number of faces to render for this frame    
     g_NumTrianglesToRender = 0;
@@ -395,27 +383,19 @@ void Update(void)
     //g_Mesh.translation.x += 0.01f;
     g_Mesh.translation.z  = 3.5f;
 
-    // compute the new camera rotation and translation for the FPS camera movement
-    Vec3 worldUp = { 0,1,0 };
-    Vec4 target  = { 0,0,1,1 };
-    Matrix cameraRotationY;
-    Matrix cameraRotation;
-
-    Matrix R = MatrixRotationAxis(g_Camera.right, g_Camera.pitch);
-    MatrixRotationY(g_Camera.yaw, &cameraRotationY);
-    cameraRotation = MatrixMulMatrix(&R, &cameraRotationY);
-
-    MatrixMulVec4(&cameraRotation, target, &target);
-    g_Camera.direction = Vec3FromVec4(&target);
-
-    // offset the camera position in the direction where the camera is pointing at
-    Vec3 computedTarget = Vec3Add(g_Camera.position, g_Camera.direction);
+    const Vec3 worldUp = { 0, 1, 0 };
+    const Vec3 target = GetCameraLookAtTarget();
 
     // create a world matrix combining scale, rotation and translation matrices;
     // and create a view matrix as well
+    MatrixInitWorld(
+        &g_Mesh.scale, 
+        &g_Mesh.rotation, 
+        &g_Mesh.translation, 
+        &g_WorldMatrix);
 
-    MatrixInitWorld(&g_Mesh.scale, &g_Mesh.rotation, &g_Mesh.translation, &g_WorldMatrix);
-    MatrixView(g_Camera.position, computedTarget, worldUp, &g_ViewMatrix);
+    MatrixView(GetCameraPosition(), target, worldUp, &g_ViewMatrix);
+
 
     // loop all triangle faces of our mesh
     for (int i = 0; i < g_Mesh.numFaces; ++i)
@@ -474,7 +454,7 @@ void Update(void)
         float dotNCamRay = Vec3Dot(normal, cameraRay);
 
         // backface culling, bypassing triangles which we don't see
-        if ((g_CullMethod == CULL_BACK) && (dotNCamRay < 0))
+        if ((isBackfaceCullEnabled) && (dotNCamRay < 0))
         {
             continue;
         }
@@ -531,7 +511,7 @@ void Update(void)
             triangleToRender.color = g_Mesh.faces[i].color;
 
             // calculate the light intensity based on face normal and light direction
-            triangleToRender.lightIntensity = -Vec3Dot(normal, g_LightDir.direction);
+            triangleToRender.lightIntensity = -Vec3Dot(normal, dirLightDirection);
          
             // save the projected triangle in the arr of triangles to render
             g_TrianglesToRender[g_NumTrianglesToRender] = triangleToRender;
@@ -553,8 +533,7 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
     //const u32 green = 0xFF00FF00;
 
     // draw filled triangles (solid color)
-    if (g_RenderMethod == RENDER_FILL_SOLID || 
-        g_RenderMethod == RENDER_FILL_SOLID_WIRE)
+    if (ShouldRenderFilledTriangles())
     {
         for (int i = 0; i < numTriangles; ++i)
         {
@@ -570,8 +549,7 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
     }
 
     // draw textured triangle
-    if (g_RenderMethod == RENDER_TEXTURED || 
-        g_RenderMethod == RENDER_TEXTURED_WIRE)
+    if (ShouldRenderTexturedTriangles())
     {
         for (int i = 0; i < numTriangles; ++i)
         {
@@ -591,10 +569,7 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
     }
 
     // draw unfilled triangle (wireframe)
-    if (g_RenderMethod == RENDER_WIRE || 
-        g_RenderMethod == RENDER_WIRE_VERTEX ||
-        g_RenderMethod == RENDER_FILL_SOLID_WIRE ||
-        g_RenderMethod == RENDER_TEXTURED_WIRE)
+    if (ShouldRenderWireframe())
     {
         for (int i = 0; i < numTriangles; ++i)
         {
@@ -609,7 +584,7 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
     }
 
     // draw vertices
-    if (g_RenderMethod == RENDER_WIRE_VERTEX)
+    if (ShouldRenderWireVertices())
     {
         for (int i = 0; i < numTriangles; ++i)
         {
@@ -626,7 +601,9 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
 
 void Render(void)
 {   
-    SDL_RenderClear(g_pRenderer);
+    //SDL_RenderClear(g_pRenderer);
+    ClearColorBuffer(0xFF000000);  // ABGR black
+    ClearZBuffer();
 
     // draw the background grid (grey dots)
     DrawGrid();
@@ -635,10 +612,6 @@ void Render(void)
     RenderTriangles(g_TrianglesToRender, g_NumTrianglesToRender);
 
     RenderColorBuffer();
-    ClearColorBuffer(0xFF000000);  // ABGR black
-    ClearZBuffer();
-
-    SDL_RenderPresent(g_pRenderer);
 }
 
 ///////////////////////////////////////////////////////////
@@ -656,9 +629,6 @@ void FreeAssetResources(void)
 
 void FreeResources(void)
 {
-    // free the memory that was dynamicall allocated by the program
-    free(g_ColorBuffer);
-    free(g_ZBuffer);
-
+    // free the memory that was dynamically allocated by the program
     FreeAssetResources();
 }

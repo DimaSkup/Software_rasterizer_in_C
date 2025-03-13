@@ -7,10 +7,24 @@
 #include "light.h"
 
 
-Light g_LightDir = 
+static Light s_DirLight = 
 {
     .direction = { 0, 0, 10 }
 };
+
+///////////////////////////////////////////////////////////
+
+void InitDirectedLight(const Vec3 direction)
+{
+    s_DirLight.direction = direction;
+}
+
+///////////////////////////////////////////////////////////
+
+Vec3 GetDirectedLightDirection(void)
+{
+    return s_DirLight.direction;
+}
 
 ///////////////////////////////////////////////////////////
 
@@ -34,4 +48,4 @@ u32 LightApplyIntensity(
     return (a | (r & 0x00FF0000) | (g & 0x0000FF00) | (b & 0x000000FF));
 }
 
-
+///////////////////////////////////////////////////////////

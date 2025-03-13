@@ -15,15 +15,32 @@ typedef struct
     Vec3 direction;
     Vec3 right;
     Vec3 velocity;
-    float pitch;     // angle in radians 
     float yaw;       // angle in radians 
+    float pitch;     // angle in radians 
 } Camera;
 
-extern Camera g_Camera;
+// ==================================================================
 
-void ComputeCameraAngles(
-    const int deltaX, 
-    const int deltaY, 
-    const float deltaTime);
+void InitCamera(const Vec3 position, const Vec3 direction);
+
+Vec3 GetCameraPosition(void);
+Vec3 GetCameraDirection(void);
+Vec3 GetCameraForwardVelocity(void);
+Vec3 GetCameraRight(void);
+
+float GetCameraYaw(void);
+float GetCameraPitch(void);
+
+void SetCameraPosition(const Vec3 position);
+void SetCameraDirection(const Vec3 direction);
+void SetCameraForwardVelocity(const Vec3 forwardVelocity);
+
+void RotateCameraYaw(const float angle);
+void RotateCameraPitch(float angle);
+
+float GetCameraMovementSpeed();
+float GetCameraRotationSpeed();
+
+Vec3 GetCameraLookAtTarget(void);
 
 #endif
