@@ -10,6 +10,30 @@
 #include "swap.h"
 #include "light.h"
 
+
+Vec3 GetTriangleNormal(const Vec4 v0, const Vec4 v1, const Vec4 v2)
+{
+    const Vec3 vecA = { v0.x, v0.y, v0.z };  /*    A    */
+    const Vec3 vecB = { v1.x, v1.y, v1.z };  /*   / \   */
+    const Vec3 vecC = { v2.x, v2.y, v2.z };  /*  C---B  */
+
+    // get the vector subtraction of B-A and C-A
+    Vec3 vecAB = Vec3Sub(vecB, vecA);
+    Vec3 vecAC = Vec3Sub(vecC, vecA);
+
+    Vec3Normalize(&vecAB);
+    Vec3Normalize(&vecAC);
+
+    // compute the face normal vector
+    Vec3 normal = Vec3Cross(vecAB, vecAC); 
+
+    // normalize the face normal vector
+    Vec3Normalize(&normal);
+
+    return normal;
+}
+
+
 ///////////////////////////////////////////////////////////
 
 void ComputeReciprocalW(
@@ -275,17 +299,20 @@ void DrawTexelLine(
     const int xStart,
     const int xEnd,
     const int y,
-    const uint32_t* texture)
+    const int textureWidth,
+    const int textureHeight,
+    const uint32_t* textureBuffer)
 {
     float alpha = 0.0f;
     float beta  = 0.0f;
     float gamma = 0.0f;
-   
+  
+
     // compute index of the pixel into z-buffer
     int pixelIdx = GetWindowWidth() * y + xStart;
 
     // go through each pixel in horizontal line
-    for (int x = xStart; x < xEnd; x++, pixelIdx++)
+    for (int x = xStart; x <= xEnd; x++, pixelIdx++)
     {
         const Vec2Int p = { x, y };
         BarycentricWeights(a, b, c, p, ac, invArea, &alpha, &beta, &gamma);
@@ -304,9 +331,6 @@ void DrawTexelLine(
         // NOTE: (1.0f - interpolated_recip_w): adjust 1/w so the pixels that are closer to the camera have smaller values (because bigger w gives us smaller 1/w so we failing z-test)    
         if (depth < GetZBufferByPixelIdx(pixelIdx))
         {
-            // update the z-buffer value with the 1/w of this current pixel
-            SetZBufferByPixelIdx(pixelIdx, depth);
-
             // interpolate u/w and v/w coords using barycentric weights and a factor of 1/w
             float interpolatedU = (texA.u * alphaMulRecipW) + (texB.u * betaMulRecipW) + (texC.u * gammaMulRecipW);
             float interpolatedV = (texA.v * alphaMulRecipW) + (texB.v * betaMulRecipW) + (texC.v * gammaMulRecipW);
@@ -318,15 +342,29 @@ void DrawTexelLine(
             interpolatedV *= invInterpolatedReciprocalW;
 
             // map the UV coordinate to the full texture width and height
-            int tx = abs((int)(interpolatedU * g_TextureWidth))  % g_TextureWidth;
-            int ty = abs((int)(interpolatedV * g_TextureHeight)) % g_TextureHeight;
+            int tx = abs((int)(interpolatedU * textureWidth))  % textureWidth;
+            int ty = abs((int)(interpolatedV * textureHeight)) % textureHeight;
+
+            uint32_t texColor = textureBuffer[textureWidth * ty + tx];
+
+
+            // alpha clipping
+            if (((texColor & 0xFF000000) >> 6) < 0.1f)
+            {
+                continue;
+            }
+            else
+            {
+                // update the z-buffer value with the 1/w of this current pixel
+                SetZBufferByPixelIdx(pixelIdx, depth);
+
+                const uint32_t pixelColor = LightApplyIntensity(texColor, lightIntensity);
+
+                // draw the pixel at pos (x,y) with the color from the mapped texture only if the depth value is less that the previous one stored in the z-buffer
+                DrawPixel(x, y, pixelColor);
+
+            }
             
-            const uint32_t texColor = texture[g_TextureWidth * ty + tx];
-            const uint32_t pixelColor = LightApplyIntensity(texColor, lightIntensity);
-
-            // so we draw the pixel at pos (x,y) with the color from the mapped texture only if the depth value is less that the previous one stored in the z-buffer
-            DrawPixel(x, y, pixelColor);
-
         } // if
     } // for
 }
@@ -373,7 +411,7 @@ void DrawTexturedTriangle(
     float u1, float v1,
     float u2, float v2,
     float lightIntensity,                                            
-    const uint32_t* texture)
+    const upng_t* pTexture)
 {
     Tex2 texA = { u0, v0 };
     Tex2 texB = { u1, v1 };
@@ -415,7 +453,10 @@ void DrawTexturedTriangle(
     const Vec2Int ab = {b.x - a.x, b.y - a.y};            
     float invArea = 1.0f / (ac.x * ab.y - ac.y * ab.x);   // 1.0f / Cross(AC, AB)
 
-    
+    const int textureWidth        = upng_get_width(pTexture);
+    const int textureHeight       = upng_get_height(pTexture); 
+    const uint32_t* textureBuffer = (uint32_t*) upng_get_buffer(pTexture);
+
     // ----------------------------------------------------
     // Render the upper part of the triangle (flat-bottom)
     // ----------------------------------------------------
@@ -451,7 +492,9 @@ void DrawTexturedTriangle(
                 xStart,
                 xEnd,
                 y,
-                texture);
+                textureWidth,
+                textureHeight,
+                textureBuffer);
         }
     }
 
@@ -489,7 +532,9 @@ void DrawTexturedTriangle(
                 xStart,
                 xEnd,
                 y,
-                texture);      
+                textureWidth,
+                textureHeight,
+                textureBuffer);      
         }
     }
 }

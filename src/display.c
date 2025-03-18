@@ -40,9 +40,20 @@ bool InitializeWindow(void)
 
     //g_WindowArea = g_WindowWidth * g_WindowHeight;
 #if 1
+
     // if we want to use "old school" style
-    g_WindowWidth  = fullscreenWidth / 5;
-    g_WindowHeight = fullscreenHeight / 5;
+    if (true)
+    {
+        g_WindowWidth  = fullscreenWidth / 2;
+        g_WindowHeight = fullscreenHeight / 2;
+        g_WindowArea = g_WindowWidth * g_WindowHeight;
+    }
+    else
+    {
+        g_WindowWidth = fullscreenWidth;
+        g_WindowHeight = fullscreenHeight;
+        g_WindowArea = g_WindowWidth * g_WindowHeight;
+    }
 
     // create a SDL window
     g_pWindow = SDL_CreateWindow(
@@ -89,6 +100,10 @@ bool InitializeWindow(void)
     // we successfully initialized SDL stuff
     return true;
 }
+
+///////////////////////////////////////////////////////////
+
+SDL_Renderer* GetRenderer(void) { return g_pRenderer; }
 
 ///////////////////////////////////////////////////////////
 
@@ -315,11 +330,7 @@ void RenderColorBuffer(void)
         g_ColorBuffer,
         (int)(g_WindowWidth * sizeof(u32)));
 
-    SDL_RenderCopy(
-        g_pRenderer,
-        g_pColorBufferTexture,
-        NULL,
-        NULL);
+    SDL_RenderCopy(g_pRenderer, g_pColorBufferTexture, NULL, NULL);
 
     SDL_RenderPresent(g_pRenderer);
 }

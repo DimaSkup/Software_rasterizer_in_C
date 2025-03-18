@@ -22,7 +22,7 @@ void InitFrustumPlanes(
 
     // vertical (by Y)
     const float sy = sinf(fovY / 2);
-    const float cy = sinf(fovY / 2);
+    const float cy = cosf(fovY / 2);
 
     const Vec3 origin = { 0,0,0 };
 

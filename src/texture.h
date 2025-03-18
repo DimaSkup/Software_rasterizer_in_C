@@ -8,7 +8,6 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-#include <stdint.h>
 #include "upng.h"
 
 typedef struct
@@ -17,12 +16,6 @@ typedef struct
     float v;
 } Tex2;
 
-extern int g_TextureWidth;
-extern int g_TextureHeight;
-
-extern upng_t* g_PngTexture;
-extern uint32_t* g_MeshTexture;
-
-void LoadPngTextureData(const char* filename);
+void LoadPngTextureData(upng_t** ppTexture, const char* filename);
 
 #endif

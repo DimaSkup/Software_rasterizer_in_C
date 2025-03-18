@@ -44,7 +44,7 @@ void ProcessKeydown(const int keycode);
 void Update(void);
 void Render(void);
 
-void FreeAssetResources(void);
+void FreeAssetResources(Mesh* pMesh);
 void FreeResources(void);
 
 #endif

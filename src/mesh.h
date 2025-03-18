@@ -3,14 +3,7 @@
 
 #include "vector.h"
 #include "triangle.h"
-#include <stdbool.h>
-
-
-#define N_CUBE_VERTICES 8
-#define N_CUBE_FACES (6 * 2)                // 6 cube faces, 2 triangle per face
-
-extern Vec3 gCubeVertices[N_CUBE_VERTICES]; 
-extern Face gCubeFaces[N_CUBE_FACES];       
+#include "upng.h"
 
 // ==================================================================
 // define a struct for dynamic size meshes, 
@@ -19,24 +12,35 @@ extern Face gCubeFaces[N_CUBE_FACES];
 typedef struct 
 {
     Vec3* vertices;                 // dynamic arr of vertices
-    Vec2* tex;                      // texture UV coords
+    Tex2* texCoords;                 // texture UV coords
     Vec3* normals;                  // normal vectors
+                                    
     Face* faces;                    // dynamic arr of faces
+    upng_t* pTexture;                // PNG texture pointer for mesh                                    
+
     Vec3  scale;
-    Vec3  rotation;                 // rotation with x,y,z values
+    Vec3  rotation;                 
     Vec3  translation;
     int   numFaces;
 } Mesh;
-
-extern Mesh g_Mesh;
 
 
 // ==================================================================
 // functions prototypes
 // ==================================================================
 void InitEmptyMesh(Mesh* pMesh);
-void LoadCubeMeshData(void);
-bool LoadObjFileData(const char* filepath);
+
+Mesh* GetMeshPtrByIdx(const int meshIdx);
+int GetNumMeshes(void);
+
+void LoadMesh(
+    const char* fileDataPath, 
+    const char* texturePath,
+    const Vec3 scale,
+    const Vec3 translation,
+    const Vec3 rotation);
+
+int  LoadObjFileData(Mesh* pMesh, const char* filepath);
 
 void DebugVertices(Vec3* vertices);
 void DebugTexCoords(Vec2* texCoords);

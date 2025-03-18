@@ -20,7 +20,7 @@ static Camera s_Camera =
 };
 
 static float s_CameraMovementSpeed = 10.0f;
-static float s_CameraRotationSpeed = 3.0f;
+static float s_CameraRotationSpeed = 0.4f;
 
 ///////////////////////////////////////////////////////////
 
@@ -117,8 +117,6 @@ void RotateCameraPitch(float angle)
 
     if (angle == 0.0f)
         return;
-
-    //
     // transform camera's direction vector
     //
     Vec4 target  = Vec4FromVec3(&s_Camera.direction);

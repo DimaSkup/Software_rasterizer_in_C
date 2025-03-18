@@ -36,6 +36,8 @@ enum RenderMethod
 // =============================
 bool InitializeWindow(void);
 
+SDL_Renderer* GetRenderer(void);
+
 int GetWindowWidth(void);
 int GetWindowHeight(void);
 bool IsCullBackface(void);

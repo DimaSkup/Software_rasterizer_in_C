@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include "vector.h"
 #include "texture.h"
+#include "upng.h"
 
 // ==================================================================
 // Typedefs
@@ -35,6 +36,7 @@ typedef struct
     Tex2 texCoords[3];
     uint32_t color;
     float lightIntensity;   // over the triangle
+    upng_t* pTexture;
 } Triangle;
 
 
@@ -47,6 +49,8 @@ void DrawFilledTriangle(
     int x2, int y2, float w2,
     const float lightIntensity,
     const uint32_t color);
+
+Vec3 GetTriangleNormal(const Vec4 v0, const Vec4 v1, const Vec4 v2);
 
 // sort triangles by average depth
 void SortTriangles(
@@ -72,7 +76,9 @@ void DrawTexelLine(
     const int xStart,
     const int xEnd,
     const int y,
-    const uint32_t* texture);
+    const int textureWidth,
+    const int textureHeight,
+    const uint32_t* textureBuffer);
 
 
 void DrawTexturedTriangle(
@@ -83,6 +89,6 @@ void DrawTexturedTriangle(
     float u1, float v1,                     // ... of the 2nd triangle vertex
     float u2, float v2,                     // ... and of the 3rd triangle vertex
     float lightIntensity,                                            
-    const uint32_t* texture);
+    const upng_t* texture);
 
 #endif
