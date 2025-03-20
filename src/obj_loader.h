@@ -12,12 +12,9 @@
 #include "triangle.h"
 #include <stdio.h>
 
-Vec3* ReadVerticesData(FILE* pFile);
-Tex2* ReadTexCoordsData(FILE* pFile);
-Vec3* ReadNormalsData(FILE* pFile);
-Face* ReadFacesData(FILE* pFile, Tex2* texCoords);
+Vec3* ReadVerticesData(FILE* pFile, char* buffer);
+Tex2* ReadTexCoordsData(FILE* pFile, char* buffer);
+Vec3* ReadNormalsData(FILE* pFile, char* buffer);
+Face* ReadFacesData(FILE* pFile, Tex2* texCoords, char* buffer);
 
-Vec3* ReadVerticesData2(FILE* pFile, char* buffer);
-Tex2* ReadTexCoordsData2(FILE* pFile, char* buffer);
-Face* ReadFacesData2(FILE* pFile, Tex2* texCoords, char* buffer);
 #endif

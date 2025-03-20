@@ -26,15 +26,6 @@ int g_WndHalfHeight = 300;
 int g_NumTransformedVertices = 0;
 int g_NumTrianglesToRender = 0;
 
-typedef enum 
-{
-    F22,
-    F117,
-    DRONE,
-    CRAB
-} AssetType;
-
-AssetType g_AssetType = DRONE;  // asset type which are currently rendered
 
 // ==================================================================
 // Declaration of global transformation matrices
@@ -73,6 +64,7 @@ void Initialize(void)
 
     // initialize the scene direction light
     InitDirectedLight(Vec3Init(0, -1, 0));
+
 #if 1
     LoadMesh(
         "assets/runway.obj",
@@ -123,9 +115,6 @@ void Initialize(void)
 
 #endif
 
-
-
-    g_AssetType = DRONE;
     g_RotationStep.y = 0.005f;
 
     // Initialize the perspective projection matrix
