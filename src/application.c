@@ -11,7 +11,6 @@
 // ==================================================================
 
 Vec4     g_TransformedVertices[30000];
-Vec4     g_VisibleVertices[30000];
 Triangle g_TrianglesToRender[10000];
 
 bool   g_IsRunning     = false;
@@ -74,44 +73,53 @@ void Initialize(void)
 
     // initialize the scene direction light
     InitDirectedLight(Vec3Init(0, -1, 0));
-#if 0
+#if 1
     LoadMesh(
         "assets/runway.obj",
         "assets/runway.png",
-        Vec3Init(1, 1, 1),
-        Vec3Init(0, -1.5f, +23),
-        Vec3Init(0, 0, 0));
+        Vec3Init(0, -1.5f, 23),
+        Vec3Init(0, 0, 0),
+        Vec3Init(1, 1, 1));
 
     LoadMesh(
         "assets/f117.obj",
         "assets/f117.png",
-        Vec3Init(1, 1, 1),
-        Vec3Init(0, -1.3f, +5),
-        Vec3Init(0, -M_PIDIV2, 0));
+        Vec3Init(0, -1.3f, 5),
+        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(1, 1, 1));
 #endif
-#if 0
+#if 1
     LoadMesh(
         "assets/f22.obj", 
         "assets/f22.png",
-        Vec3Init(1, 1, 1),
-        Vec3Init(-2, -1.3f, +9),
-        Vec3Init(0, -M_PIDIV2, 0));
+        Vec3Init(-2, -1.3f, 9),
+        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(1, 1, 1));
 #endif
-#if 0
+#if 1 
     LoadMesh(
         "assets/efa.obj",
         "assets/efa.png",
-        Vec3Init(1, 1, 1),
-        Vec3Init(+2, -1.3f, +9),
-        Vec3Init(0, -M_PIDIV2, 0));
+        Vec3Init(2, -1.3f, 9),
+        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(1, 1, 1));
+#endif
+
+#if 1 
+    LoadMesh(
+        "assets/cube.obj",
+        "assets/cube.png",
+        Vec3Init(2, -1.3f, 0),
+        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(1, 1, 1));
 #endif
 #if 1
     LoadMesh(
         "assets/tree_spruce/tree_spruce.obj",
         "assets/tree_spruce/tree_spruce_diffuse.png",
-        Vec3Init(1, 1, 1),
-        Vec3Init(5, -1.3f, +9),
-        Vec3Init(0, -M_PIDIV2, 0));
+        Vec3Init(5, -1.3f, 9),
+        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(1, 1, 1));
 
 #endif
 
@@ -157,6 +165,9 @@ void Run(void)
 void Shutdown(void)
 {
     // call this func after finishing of the main game loop
+    
+    printf("Application shutdown:\n");
+
     DestroyWindow();
     FreeResources();
 }
@@ -394,7 +405,6 @@ void TransformVertices(
     // transform all the vertices in the mesh using the world matrix
     for (int i = 0, vIdx = 0; i < pMesh->numFaces; ++i, vIdx += 3)
     {
-        // multiply the world matrix by each original vertex
         MatrixMulVec4(&g_WorldMatrix, vertices[vIdx + 0], &vertices[vIdx + 0]);
         MatrixMulVec4(&g_WorldMatrix, vertices[vIdx + 1], &vertices[vIdx + 1]);
         MatrixMulVec4(&g_WorldMatrix, vertices[vIdx + 2], &vertices[vIdx + 2]);
@@ -403,7 +413,6 @@ void TransformVertices(
     // transform all the vertices using the view matrix
     for (int i = 0, vIdx = 0; i < pMesh->numFaces; ++i, vIdx += 3)
     {
-        // multiply the world matrix by each original vertex
         MatrixMulVec4(&g_ViewMatrix, vertices[vIdx + 0], &vertices[vIdx + 0]);
         MatrixMulVec4(&g_ViewMatrix, vertices[vIdx + 1], &vertices[vIdx + 1]);
         MatrixMulVec4(&g_ViewMatrix, vertices[vIdx + 2], &vertices[vIdx + 2]);
@@ -420,7 +429,7 @@ void ProcessMesh(Mesh* pMesh)
 
     const Vec3 dirLightDirection = {0, -1, 0};//GetDirectedLightDirection();
     const bool isBackfaceCullEnabled = IsCullBackface();
-    const int numTriangles = (pMesh->numFaces * 3);
+    const int numTriangles = (pMesh->numFaces);
 
     // create a world matrix combining scale, rotation and translation matrices;
     MatrixInitWorld(
@@ -660,11 +669,19 @@ void Render(void)
 
 void FreeAssetResources(Mesh* pMesh)
 {
-    upng_free(pMesh->pTexture);
-    
-    ArrayFree((void**)&(pMesh->faces));
-    ArrayFree((void**)&(pMesh->normals));
-    ArrayFree((void**)&(pMesh->vertices));
+    printf("Free mesh: %s\n", pMesh->name);
+
+    if (pMesh->pTexture)
+        upng_free(pMesh->pTexture);
+   
+    if (pMesh->faces) 
+        ArrayFree((void**)&(pMesh->faces));
+
+    if (pMesh->normals)
+        ArrayFree((void**)&(pMesh->normals));
+
+    if (pMesh->vertices)
+        ArrayFree((void**)&(pMesh->vertices));
 }
 
 ///////////////////////////////////////////////////////////

@@ -11,6 +11,7 @@
 // ==================================================================
 typedef struct 
 {
+    char name[32];
     Vec3* vertices;                 // dynamic arr of vertices
     Tex2* texCoords;                 // texture UV coords
     Vec3* normals;                  // normal vectors
@@ -36,9 +37,9 @@ int GetNumMeshes(void);
 void LoadMesh(
     const char* fileDataPath, 
     const char* texturePath,
-    const Vec3 scale,
     const Vec3 translation,
-    const Vec3 rotation);
+    const Vec3 rotation,
+    const Vec3 scale);
 
 int  LoadObjFileData(Mesh* pMesh, const char* filepath);
 

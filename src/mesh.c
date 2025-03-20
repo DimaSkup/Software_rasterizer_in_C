@@ -22,6 +22,7 @@ static int s_NumMeshes = 0;
 
 void InitEmptyMesh(Mesh* pMesh)
 {
+    memset(pMesh->name, 0, 32);
     pMesh->vertices    = NULL;
     pMesh->texCoords   = NULL;
     pMesh->normals     = NULL;
@@ -54,9 +55,9 @@ int GetNumMeshes(void)
 void LoadMesh(
     const char* fileDataPath, 
     const char* texturePath,
-    const Vec3 scale,
     const Vec3 translation,
-    const Vec3 rotation)
+    const Vec3 rotation,
+    const Vec3 scale)
 {
     assert((fileDataPath != NULL) && (texturePath != NULL) && "invalid input args");
 
@@ -286,7 +287,7 @@ int LoadObjFileData(Mesh* pMesh, const char* filepath)
             printf("- texture coords are loaded\n");
         }
         // ... the normals data block
-#if 0
+#if 1
         if (strncmp(buffer, "vn ", 3) == 0)
         {
             pMesh->normals = ReadNormalsData(pFile);
@@ -303,7 +304,9 @@ int LoadObjFileData(Mesh* pMesh, const char* filepath)
 
     pMesh->numFaces = ArrayLength(pMesh->faces);
     printf("- number of faces is loaded:%d\n", pMesh->numFaces);
-    
+   
+
+
     // release memory from the temp texture coords data buffer
     ArrayFree((void**)&(pMesh->texCoords));
 
@@ -335,6 +338,11 @@ int LoadObjFileData(Mesh* pMesh, const char* filepath)
 
     fclose(pFile);
 #endif
+
+
+    const int nameLength = (strlen(filepath) > 32) ? 32 : strlen(filepath);
+    strncpy(pMesh->name, filepath, nameLength);
+
     printf(".obj asset is successfully loaded: %s\n\n", filepath); 
 
     return 0; 
