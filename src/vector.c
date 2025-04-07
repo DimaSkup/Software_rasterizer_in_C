@@ -206,10 +206,7 @@ Vec3 Vec3FromVec4(const Vec4* v)
 // ==================================================================
 // Math helpers
 // ==================================================================
-Vec3 LerpVec3(
-    const Vec3 p0, 
-    const Vec3 p1, 
-    const float t)
+Vec3 LerpVec3(const Vec3 p0, const Vec3 p1, const float t)
 {
     // linear interpolation: P = P0 + t(P1 - P0):
     // p0 - start point
@@ -220,5 +217,29 @@ Vec3 LerpVec3(
     
     return p;                                           
 }
+
+///////////////////////////////////////////////////////////
+
+Vec3 GetTriangleNormal(const Vec3 v0, const Vec3 v1, const Vec3 v2)
+{
+    /*   0   */
+    /*  / \  */
+    /* 2---1 */
+   
+    // get vectors: v1-v0 and v2-v0
+    Vec3 vec01 = Vec3Sub(v1, v0);
+    Vec3 vec02 = Vec3Sub(v2, v0);
+
+    Vec3Normalize(&vec01);
+    Vec3Normalize(&vec02);
+
+    // compute the triangle's normal vector
+    Vec3 normal = Vec3Cross(vec01, vec02);
+    Vec3Normalize(&normal);
+
+    // return a normal vector of triangle by 3 input vertices (clockwise order)
+    return normal;
+}
+
 
 

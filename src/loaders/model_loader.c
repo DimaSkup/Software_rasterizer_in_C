@@ -1,52 +1,7 @@
-#include "mesh.h"
-#include "array.h"
-#include "console_color.h"
-#include "obj_loader.h"
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
+#include "model_loader.h"
 
-#define BUFFER_SIZE 64
 
-#define MAX_NUM_MESHES 10
-static Mesh s_Meshes[MAX_NUM_MESHES];
-static int s_NumMeshes = 0;
-
-///////////////////////////////////////////////////////////
-
-void InitEmptyMesh(Mesh* pMesh)
-{
-    memset(pMesh->name, 0, 32);
-    pMesh->vertices    = NULL;
-    pMesh->texCoords   = NULL;
-    pMesh->normals     = NULL;
-    pMesh->faces       = NULL;
-    pMesh->pTexture    = NULL;
-    pMesh->scale       = (Vec3){ 1,1,1 };
-    pMesh->rotation    = (Vec3){ 0,0,0 };
-    pMesh->translation = (Vec3){ 0,0,0 };
-}
-
-///////////////////////////////////////////////////////////
-
-Mesh* GetMeshPtrByIdx(const int meshIdx)
-{
-    if (meshIdx < 0 || meshIdx >= s_NumMeshes)
-        return NULL;
-
-    return &(s_Meshes[meshIdx]);
-}
-
-///////////////////////////////////////////////////////////
-
-int GetNumMeshes(void)
-{
-    return s_NumMeshes;
-}
-
-///////////////////////////////////////////////////////////
-
-void LoadMesh(
+void LoadModel(
     const char* fileDataPath, 
     const char* texturePath,
     const Vec3 translation,
@@ -117,7 +72,13 @@ int LoadObjFileData(Mesh* pMesh, const char* filepath)
         }
         if (strncmp(buffer, "f ", 2) == 0)
         {
-            pMesh->faces = ReadFacesData(pFile, pMesh->texCoords, buffer);
+            pMesh->faces = ReadFacesData(
+                pFile, 
+                pMesh->vertices,
+                pMesh->texCoords, 
+                &pMesh->normals,
+                buffer,
+                ArrayLength(pMesh->vertices));
             //printf("- faces are loaded\n");
         }
     }

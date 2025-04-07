@@ -8,8 +8,9 @@
 #ifndef LIGHT_H
 #define LIGHT_H
 
+#include "common_types.h"
 #include "vector.h"
-#include <stdint.h>
+
 
 // 
 // Typedefs
@@ -19,7 +20,6 @@ typedef struct
     Vec3 direction;
 } Light;
 
-typedef uint32_t u32;
 
 
 //

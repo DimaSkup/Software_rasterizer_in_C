@@ -15,10 +15,7 @@
 #define CLIPPING_H
 
 #include "vector.h"
-#include "triangle.h"
-
-#define MAX_NUM_POLYGON_VERTICES  10
-#define MAX_NUM_POLYGON_TRIANGLES 8   // MAX_NUM_POLYGON_VERTICES - 2
+#include "geomtypes.h"
 
 enum 
 {
@@ -30,19 +27,7 @@ enum
     FAR_FRUSTUM_PLANE
 };
 
-typedef struct
-{
-    Vec3 point;
-    Vec3 normal;
-} Plane;
-
-typedef struct
-{
-    Vec3 vertices[MAX_NUM_POLYGON_VERTICES];
-    Tex2 texCoords[MAX_NUM_POLYGON_VERTICES];
-    int numVertices;
-} Polygon;
-
+///////////////////////////////////////////////////////////
 
 void InitFrustumPlanes(
     const float fovX, 
@@ -51,12 +36,12 @@ void InitFrustumPlanes(
     const float farZ);
 
 Polygon CreatePolygonFromTriangle(
-    const Vec4 v0, 
-    const Vec4 v1, 
-    const Vec4 v2,
-    const Tex2 t0,
-    const Tex2 t1, 
-    const Tex2 t2);
+    const Vec3 v0,                    // vertex 0 
+    const Vec3 v1, 
+    const Vec3 v2,
+    const Vec2 t0,
+    const Vec2 t1, 
+    const Vec2 t2);
 
 void ClipPolygon(Polygon* pPolygon);
 void ClipPolygonAgainstPlane(Polygon* pPolygon, const int planeType);

@@ -3,15 +3,22 @@
 // Created:     03.02.25 by DimaSkup
 // ==================================================================
 #include "application.h"
+#include "macros.h"
+#include "log.h"
 #include <assert.h>
+//#include "./loaders/plx_loader.h"
 
 
 // ==================================================================
 // initialize global variables
 // ==================================================================
+Vec3       g_TransformedVertices[30000];
+Vec3       g_TransformedNormals[10000];
+RenderList g_RenderList;
+Model      g_Models[MAX_NUM_MODELS];
+int        g_NumModels = 0;
 
-Vec4     g_TransformedVertices[30000];
-Triangle g_TrianglesToRender[10000];
+///////////////////////////////////////////////////////////
 
 bool   g_IsRunning     = false;
 int    g_PrevFrameTime = 0;
@@ -43,6 +50,9 @@ void Initialize(void)
 {
     // initialize window, some global variables and game objects
 
+    if (!InitLogger())
+        exit(-1);
+
     g_IsRunning = InitializeWindow();
 
     if (!g_IsRunning)
@@ -65,7 +75,7 @@ void Initialize(void)
     // initialize the scene direction light
     InitDirectedLight(Vec3Init(0, -1, 0));
 
-#if 1
+#if 0
     LoadMesh(
         "assets/runway.obj",
         "assets/runway.png",
@@ -77,50 +87,55 @@ void Initialize(void)
         "assets/f117.obj",
         "assets/f117.png",
         Vec3Init(0, -1.3f, 5),
-        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(0, -PI_DIV_2, 0),
         Vec3Init(1, 1, 1));
 #endif
-#if 1
+#if 0
     LoadMesh(
         "assets/f22.obj", 
         "assets/f22.png",
         Vec3Init(-2, -1.3f, 9),
-        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(0, -PI_DIV_2, 0),
         Vec3Init(1, 1, 1));
 #endif
-#if 1 
+#if 0 
     LoadMesh(
         "assets/efa.obj",
         "assets/efa.png",
         Vec3Init(2, -1.3f, 9),
-        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(0, -PI_DIV_2, 0),
         Vec3Init(1, 1, 1));
 #endif
 
-#if 1 
+#if 0 
     LoadMesh(
         "assets/cube.obj",
         "assets/cube.png",
-        Vec3Init(2, -1.3f, 0),
-        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(2, -1.3f, 5),
+        Vec3Init(0, -PI_DIV_2, 0),
         Vec3Init(1, 1, 1));
 #endif
-#if 1
+#if 0
     LoadMesh(
         "assets/tree_spruce/tree_spruce.obj",
         "assets/tree_spruce/tree_spruce_diffuse.png",
         Vec3Init(5, -1.3f, 9),
-        Vec3Init(0, -M_PIDIV2, 0),
+        Vec3Init(0, -PI_DIV_2, 0),
         Vec3Init(1, 1, 1));
 
 #endif
 
     g_RotationStep.y = 0.005f;
 
+    // initialize the main camera
+    const Vec3 cameraPos = { 0,0,0 };
+    const Vec3 cameraDir = { 0,0,1 };
+    InitCamera(cameraPos, cameraDir);
+
     // Initialize the perspective projection matrix
     const float aspectX = (float)wndWidth / (float)wndHeight;                                                  
     const float aspectY = (float)wndHeight / (float)wndWidth;
-    const float fovY    = M_PIDIV3;
+    const float fovY    = PI_DIV_3;
     const float fovX    = 2.0f * atan(tan(fovY/2) * aspectX);
     const float nearZ   = 1.0f;
     const float farZ    = 100.0f;
@@ -133,7 +148,19 @@ void Initialize(void)
     SDL_ShowCursor(SDL_DISABLE);
     SDL_SetRelativeMouseMode(SDL_TRUE);   // to make able mouse cursor move past the window's border
 
+#if 0
+    Model model;
+    const Vec3 scale = { 1,1,1 };
+    const Vec3 pos = { 0,0,0 };
+    const Vec3 rot = { 0,0,0 };
+
+    LoadObjectPLG(&model, "assets/cube.plg", &scale, &pos, &rot);
+#endif
+
+    LogPrint(LOG_INFO, "kekw!");
+
     printf("Application is initialized\n");
+    exit(-1);
 }
 
 ///////////////////////////////////////////////////////////
@@ -157,6 +184,7 @@ void Shutdown(void)
     
     printf("Application shutdown:\n");
 
+    CloseLogger();
     DestroyWindow();
     FreeResources();
 }
@@ -370,53 +398,97 @@ void TransformVertices(
     const Matrix* pView,
     Mesh* pMesh)
 {
+#if 0
     // transform all the vertices of the input mesh
     // first using the world matrix, and then using the view matrix
 
-    Vec4* vertices = g_TransformedVertices;
-
+    Vec3* vertices = g_TransformedVertices;
+    
     // convert all the faces of the mesh from Vec3 into Vec4
     for (int i = 0, vIdx = 0; i < pMesh->numFaces; ++i)
     {
-        const int idx0 = pMesh->faces[i].a;
-        const int idx1 = pMesh->faces[i].b;
-        const int idx2 = pMesh->faces[i].c;
+        const int idx0 = pMesh->faces[i].idxs[0];
+        const int idx1 = pMesh->faces[i].idxs[1];
+        const int idx2 = pMesh->faces[i].idxs[2];
         
-        const Vec3 v0 = pMesh->vertices[idx0];
-        const Vec3 v1 = pMesh->vertices[idx1];
-        const Vec3 v2 = pMesh->vertices[idx2];
-
-        vertices[vIdx++] = (Vec4){ v0.x, v0.y, v0.z, 1.0f };
-        vertices[vIdx++] = (Vec4){ v1.x, v1.y, v1.z, 1.0f };
-        vertices[vIdx++] = (Vec4){ v2.x, v2.y, v2.z, 1.0f };
+        vertices[vIdx++] = pMesh->vertices[idx0];
+        vertices[vIdx++] = pMesh->vertices[idx1];
+        vertices[vIdx++] = pMesh->vertices[idx2];
     }
+
+
+#if 0
+    // MORPHING
+    //
+    static int upDown = 1;  // -1 means reducing
+                            // +1 means rising
+
+    static float scale = 1; // current scale
+
+    // make bigger or smaller?
+    if (upDown == 1)
+    {
+        for (int i = 0, vIdx = 0; i < pMesh->numFaces; ++i, vIdx += 3)
+        {
+            vertices[vIdx + 0] = Vec3Mul(vertices[vIdx + 0], 1.05f);
+            vertices[vIdx + 1] = Vec3Mul(vertices[vIdx + 1], 1.05f);
+            vertices[vIdx + 2] = Vec3Mul(vertices[vIdx + 2], 1.05f);
+        }
+        scale *= (1.0f + g_DeltaTime);
+    }
+    else
+    {
+        for (int i = 0, vIdx = 0; i < pMesh->numFaces; ++i, vIdx += 3)
+        {
+            vertices[vIdx + 0] = Vec3Mul(vertices[vIdx + 0], 0.95f);
+            vertices[vIdx + 1] = Vec3Mul(vertices[vIdx + 1], 0.95f);
+            vertices[vIdx + 2] = Vec3Mul(vertices[vIdx + 2], 0.95f);
+        }
+        scale *= (1.0f - g_DeltaTime);
+    }
+
+    if (scale < 0.45f || scale > 1.55f)
+        upDown = -upDown;
+#endif
+
 
     // transform all the vertices in the mesh using the world matrix
     for (int i = 0, vIdx = 0; i < pMesh->numFaces; ++i, vIdx += 3)
     {
-        MatrixMulVec4(&g_WorldMatrix, vertices[vIdx + 0], &vertices[vIdx + 0]);
-        MatrixMulVec4(&g_WorldMatrix, vertices[vIdx + 1], &vertices[vIdx + 1]);
-        MatrixMulVec4(&g_WorldMatrix, vertices[vIdx + 2], &vertices[vIdx + 2]);
+        vertices[vIdx + 0] = MatrixMulVec3(&g_WorldMatrix, vertices[vIdx + 0]);
+        vertices[vIdx + 1] = MatrixMulVec3(&g_WorldMatrix, vertices[vIdx + 1]);
+        vertices[vIdx + 2] = MatrixMulVec3(&g_WorldMatrix, vertices[vIdx + 2]);
     }
 
+#if 1
     // transform all the vertices using the view matrix
     for (int i = 0, vIdx = 0; i < pMesh->numFaces; ++i, vIdx += 3)
     {
-        MatrixMulVec4(&g_ViewMatrix, vertices[vIdx + 0], &vertices[vIdx + 0]);
-        MatrixMulVec4(&g_ViewMatrix, vertices[vIdx + 1], &vertices[vIdx + 1]);
-        MatrixMulVec4(&g_ViewMatrix, vertices[vIdx + 2], &vertices[vIdx + 2]);
+        vertices[vIdx + 0] = MatrixMulVec3(&g_ViewMatrix, vertices[vIdx + 0]);
+        vertices[vIdx + 1] = MatrixMulVec3(&g_ViewMatrix, vertices[vIdx + 1]);
+        vertices[vIdx + 2] = MatrixMulVec3(&g_ViewMatrix, vertices[vIdx + 2]);
     }
+
+    // compute normal vectors
+    for (int i = 0, vIdx = 0; i < pMesh->numFaces; ++i, vIdx += 3)
+    { 
+        g_TransformedNormals[i] = GetTriangleNormal(vertices[vIdx + 0], vertices[vIdx + 1], vertices[vIdx + 2]);
+    }
+
+    #endif
+#endif
 }
 
 ///////////////////////////////////////////////////////////
 
 void ProcessMesh(Mesh* pMesh)
 {
-    
-    Vec4* vertices = g_TransformedVertices;
+#if 0
+
+    Vec3* vertices = g_TransformedVertices;
     upng_t* pMeshTexture = pMesh->pTexture;
 
-    const Vec3 dirLightDirection = {0, -1, 0};//GetDirectedLightDirection();
+    //const Vec3 dirLightDirection = {0, -1, 0};//GetDirectedLightDirection();
     const bool isBackfaceCullEnabled = IsCullBackface();
     const int numTriangles = (pMesh->numFaces);
 
@@ -434,22 +506,26 @@ void ProcessMesh(Mesh* pMesh)
     for (int i = 0, vIdx = 0; i < numTriangles; ++i)
     {
         const Face* pFace = pMesh->faces + i;
-        const u32 triangleColor = pFace->color;
+        //const u32 triangleColor = pFace->color;
 
-        Vec4 vertex0 = vertices[vIdx++];
-        Vec4 vertex1 = vertices[vIdx++];
-        Vec4 vertex2 = vertices[vIdx++];
+        //Vec4 vertex0 = Vec4FromVec3(&vertices[vIdx++]);
+        //Vec4 vertex1 = Vec4FromVec3(&vertices[vIdx++]);
+        //Vec4 vertex2 = Vec4FromVec3(&vertices[vIdx++]);
+
+        const Vec3 vertex0 = vertices[vIdx++];
+        const Vec3 vertex1 = vertices[vIdx++];
+        const Vec3 vertex2 = vertices[vIdx++];
 #if 1
         // ------------------------------------------------
 
         // calculate the triangle face normal
-        const Vec3 faceNormal = GetTriangleNormal(vertex0, vertex1, vertex2);
+        const Vec3 faceNormal = g_TransformedNormals[i];  //GetTriangleNormal(vertex0, vertex1, vertex2);
  
         // backface culling, bypassing triangles which we don't see
         if (isBackfaceCullEnabled)
         {
-            // find the camera ray vector (pointA => camera_pos)
-            Vec3 cameraRay = Vec3Sub(Vec3Init(0,0,0), Vec3FromVec4(&vertex0));
+            // find the camera ray vector (pointA => camera_pos_in_view_space)
+            Vec3 cameraRay = Vec3Sub(Vec3Init(0,0,0), vertex0);
             
             // take the dot product btw the normal and the camera ray;
             // and if this dot prod is < 0, then we don't display the face
@@ -466,9 +542,9 @@ void ProcessMesh(Mesh* pMesh)
             vertex0,
             vertex1,
             vertex2,
-            pFace->aUV,
-            pFace->bUV,
-            pFace->cUV);
+            pFace->texCoords[0],
+            pFace->texCoords[1],
+            pFace->texCoords[2]);
         
         // clip the polygon and return a new polygon with potential new vertices
         ClipPolygon(&polygon);
@@ -506,19 +582,36 @@ void ProcessMesh(Mesh* pMesh)
                 triangleToRender.points[j].y += g_WndHalfHeight;
             }
 
-            triangleToRender.color = triangleColor;
+            uint8_t r = abs((int)(faceNormal.z * 255.0f));
+            uint8_t g = abs((int)(faceNormal.y * 255.0f));
+            uint8_t b = abs((int)(faceNormal.x * 255.0f));
+
+            uint32_t color = 0xFF000000;
+            color |= r;
+            color |= (g << 8);
+            color |= (b << 16);
+            
+            triangleToRender.color = color;
             triangleToRender.pTexture = pMeshTexture;
             
 
             // calculate the light intensity based on face normal and light direction
-            triangleToRender.lightIntensity = 1.0f; //-Vec3Dot(faceNormal, GetDirectedLightDirection());
+            triangleToRender.lightIntensity =  1.0f;//-Vec3Dot(faceNormal, GetDirectedLightDirection());
          
             // save the projected triangle in the arr of triangles to render
-            g_TrianglesToRender[g_NumTrianglesToRender] = triangleToRender;
-            g_NumTrianglesToRender++;
+            g_RenderList.triangles[g_RenderList.numTriangles] = triangleToRender;
+            g_RenderList.numTriangles++;
 
         } // end loop through triangles after clipping
     } // end loop throught triangles of the mesh
+#endif
+}
+
+///////////////////////////////////////////////////////////
+
+void ResetRenderList(RenderList* pRenderList)
+{
+    pRenderList->numTriangles = 0;
 }
 
 ///////////////////////////////////////////////////////////
@@ -529,6 +622,8 @@ void Update(void)
     g_DeltaTime = (SDL_GetTicks() - g_PrevFrameTime) * 0.001; 
         
     g_PrevFrameTime = SDL_GetTicks();
+
+    ResetRenderList(&g_RenderList);
 
     // normalize the directed light vector, if we don't do this
     // we might explode the brightness value of the triangles colors
@@ -553,10 +648,12 @@ void Update(void)
     // update the all meshes for this frame
     // and load store all the visible triangles of 
     // these meshes for rendering
+#if 0
     for (int meshIdx = 0; meshIdx < GetNumMeshes(); ++meshIdx)
     {
         ProcessMesh(GetMeshPtrByIdx(meshIdx));
     }
+#endif
 }
 
 ///////////////////////////////////////////////////////////
@@ -581,7 +678,6 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
                 p[0].x, p[0].y, p[0].w,
                 p[1].x, p[1].y, p[1].w,
                 p[2].x, p[2].y, p[2].w,
-                triangles[i].lightIntensity,
                 triangles[i].color);
         }        
     }
@@ -589,23 +685,31 @@ void RenderTriangles(const Triangle* triangles, const int numTriangles)
     // draw textured triangle
     if (ShouldRenderTexturedTriangles())
     {
+#if 0
         for (int i = 0; i < numTriangles; ++i)
         {
             const Triangle* tr = triangles + i;
 
+            const upng_t* pTexture   = tr->pTexture;
+            const int textureWidth        = upng_get_width(pTexture);
+            const int textureHeight       = upng_get_height(pTexture); 
+            const uint32_t* textureBuffer = (uint32_t*) upng_get_buffer(pTexture);
+
+
             const Vec4* p   = tr->points;    // points of the projected triangle
-            const Tex2* tex = tr->texCoords;     
+            const Vec2* tex = tr->texCoords;     
 
             DrawTexturedTriangle(
                 p[0].x, p[0].y, p[0].z, p[0].w,
                 p[1].x, p[1].y, p[1].z, p[1].w,
                 p[2].x, p[2].y, p[2].z, p[2].w,
-                tex[0].u, tex[0].v,
-                tex[1].u, tex[1].v,
-                tex[2].u, tex[2].v,
+                tex[0], tex[1], tex[2],
                 tr->lightIntensity,
-                tr->pTexture);
+                textureWidth,
+                textureHeight,
+                textureBuffer);
         }
+#endif
     }
 
     // draw unfilled triangle (wireframe)
@@ -649,7 +753,7 @@ void Render(void)
     DrawGrid();
 
     // loop all projected triangles and render them
-    RenderTriangles(g_TrianglesToRender, g_NumTrianglesToRender);
+    RenderTriangles(g_RenderList.triangles, g_RenderList.numTriangles);
 
     RenderColorBuffer();
 }
@@ -658,6 +762,9 @@ void Render(void)
 
 void FreeAssetResources(Mesh* pMesh)
 {
+    // FIXME
+
+#if 0
     printf("Free mesh: %s\n", pMesh->name);
 
     if (pMesh->pTexture)
@@ -671,15 +778,18 @@ void FreeAssetResources(Mesh* pMesh)
 
     if (pMesh->vertices)
         ArrayFree((void**)&(pMesh->vertices));
+#endif
 }
 
 ///////////////////////////////////////////////////////////
 
 void FreeResources(void)
 {
+#if 0
     // free the memory that was dynamically allocated by the program
     for (int meshIdx = 0; meshIdx < GetNumMeshes(); ++meshIdx)
     {
         FreeAssetResources(GetMeshPtrByIdx(meshIdx));
     }
+#endif
 }

@@ -15,7 +15,13 @@
 #define PRINT_OBJ_FACES_DEBUG_INFO 0
 #define BUFFER_SIZE 64
 
+// TODO: debug functions prototypes
+void DebugVertices(Vec3* vertices);
+void DebugTexCoords(Vec2* texCoords);
+void DebugNormals(Vec3* normals);
+void DebugFaces(Face* faces);
 
+///////////////////////////////////////////////////////////
 
 Vec3* ReadVerticesData(FILE* pFile, char* buffer)
 {
@@ -48,19 +54,19 @@ Vec3* ReadVerticesData(FILE* pFile, char* buffer)
 
 ///////////////////////////////////////////////////////////
 
-Tex2* ReadTexCoordsData(FILE* pFile, char* buffer)
+Vec2* ReadTexCoordsData(FILE* pFile, char* buffer)
 {
     // read in textures data into arr and return a ptr to this arr
 
     const int bufsize = BUFFER_SIZE;
-    Tex2 tex          = {0,0};
-    Tex2* texCoords   = NULL;
+    Vec2  tex          = {0,0};
+    Vec2* texCoords   = NULL;
 
 
     // while we're reading the texture coords data
     while (strncmp(buffer, "vt ", 3) == 0) 
     {
-        sscanf(buffer, "vt %f %f", &tex.u, &tex.v);
+        sscanf(buffer, "vt %f %f", &tex.x, &tex.x);
         ArrayPush(texCoords, tex); 
         fgets(buffer, bufsize, pFile);
     } 
@@ -110,17 +116,84 @@ Vec3* ReadNormalsData(FILE* pFile, char* buffer)
 
 ///////////////////////////////////////////////////////////
 
-Face* ReadFacesData(FILE* pFile, Tex2* texCoords, char* buffer)
+void ComputeNormals( 
+    const Vec3* vertices, 
+    const int numVertices,
+    Vec3** normals)
+{
+    assert((vertices != NULL) && "input ptr to vertices == NULL");
+    assert((numVertices > 0) && "input number of vertices must be > 0");
+    printf("num vertices == %d\n", numVertices);
+    assert((numVertices % 3 == 0) && "invalid input args");    
+
+    // go through vertices and for each 3 vertices (triangle) compute normal vector
+    for (int i = 0; i < numVertices;)
+    {
+        const Vec3 v0 = vertices[i++];
+        const Vec3 v1 = vertices[i++];
+        const Vec3 v2 = vertices[i++];
+
+#if 0
+        // find triangle edge vectors
+        Vec3 vec01 = { v1.x - x0.x, v1.y - v0.y, v1.z - v0.z };
+        Vec3 vec02 = { v2.x - x0.x, v2.y - v0.y, v2.z - v0.z };
+
+        // compute inverse length of vectors
+        const float invLength01 = 1.0f / sqrtf(vec01.x*vec01.x + vec01.y*vec01.y + vec01.z*vec01.z);
+        const float invLength02 = 1.0f / sqrtf(vec02.x*vec02.x + vec02.y*vec02.y + vec02.z*vec02.z);
+
+        // normalize edge vectors
+        vec01.x *= invLen01;
+        vec01.y *= invLen01;
+        vec01.z *= invLen01;
+
+        vec02.x *= invLen02;
+        vec02.y *= invLen02;
+        vec02.z *= invLen02;
+#endif
+        // compute vectors: v1-v0 and v2-v0
+        Vec3 vec01 = Vec3Sub(v1, v0);
+        Vec3 vec02 = Vec3Sub(v2, v0);
+
+        // compute the triangle's normal vector
+        Vec3 normal = Vec3Cross(vec01, vec02);
+        Vec3Normalize(&normal);
+
+        ArrayPush(*normals, normal);
+    }
+}
+
+
+///////////////////////////////////////////////////////////
+
+Face* ReadFacesData(
+    FILE* pFile,
+    Vec3* vertices, 
+    Vec2* texCoords, 
+    Vec3** normals,
+    char* buffer,
+    const int numVertices)
 {
     // read in faces data into arr and return a ptr to this arr
 
-    assert((pFile) && (texCoords));
+    assert(pFile     && "input ptr to file == NULL");
+    assert(vertices  && "input ptr to vertices == NULL");
+    assert(texCoords && "input ptr to texture coords == NULL");
+    //assert(normals   && "input ptr to normals == NULL");
+    assert(buffer    && "input ptr to buffer == NULL");
+
+    // if we didn't load any normals data before we compute them manually
+    if (*normals == NULL)
+    {
+        //ComputeNormals(vertices, numVertices, normals);
+    }
 
     char* result = buffer;
     int bufsize = BUFFER_SIZE;
     int texIdxs[3];          // texture coords index
     int normIdxs[3];         // normal vector index
     Face* faces = NULL;
+    //int *normalIdxs = NULL;  // array of indices to normal-vectors
     Face face;
 
     // while we're reading the faces data
@@ -139,6 +212,8 @@ Face* ReadFacesData(FILE* pFile, Tex2* texCoords, char* buffer)
         face.aUV = texCoords[texIdxs[0] - 1];
         face.bUV = texCoords[texIdxs[1] - 1];
         face.cUV = texCoords[texIdxs[2] - 1];
+
+        face.normal = (*normals)[normIdxs[0]]; 
 
         // flip the V component to account for inverted UV-coords (V grows downwards)
         face.aUV.v = 1.0f - face.aUV.v;
