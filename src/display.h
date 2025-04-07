@@ -1,7 +1,7 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <stdint.h>
+#include "common_types.h"
 #include <stdbool.h>
 #include <math.h>
 #include <SDL2/SDL.h>
@@ -9,12 +9,23 @@
 #define FPS 500
 #define FRAME_TARGET_TIME (1000 / FPS)
 
+
+// ============================
+// globals
+// ============================
+extern const int g_DefaultWindowWidth;
+extern const int g_DefaultWindowHeight;
+
+extern int    g_WindowWidth;
+extern int    g_WindowHeight;
+extern int    g_WindowArea;
+extern u32*   g_ColorBuffer;
+extern float* g_ZBuffer;
+
+
 // ============================
 // typedefs
 // ============================
-typedef uint32_t u32;
-typedef uint32_t Color;
-
 enum CullMethod
 {
     CULL_NONE,              // disable backface-culling
@@ -49,15 +60,6 @@ bool ShouldRenderFilledTriangles(void);
 bool ShouldRenderTexturedTriangles(void);
 bool ShouldRenderWireframe(void);
 bool ShouldRenderWireVertices(void);
-
-void DrawPixel     (int x, int y, Color color);
-void DrawPixelByIdx(const int pixelIdx, Color color);
-void DrawLine      (int x0, int y0, int x1, int y1, Color color);
-void DrawLine2     (int x0, int y0, int x1, int y1, Color color);
-void DrawTriangle  (int x0, int y0, int x1, int y1, int x2, int y2, Color color);
-void DrawGrid      (void);
-void DrawRect      (int x, int y, int width, int height, Color color);
-void DrawCircle    (int x, int y, int radius, Color color);
 
 void RenderColorBuffer(void);
 void ClearColorBuffer(Color color);

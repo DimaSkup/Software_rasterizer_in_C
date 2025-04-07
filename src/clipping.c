@@ -1,5 +1,5 @@
 #include "clipping.h"
-#include "math_common.h"
+#include "macros.h"
 #include <math.h>
 
 
@@ -54,22 +54,17 @@ void InitFrustumPlanes(
 ///////////////////////////////////////////////////////////
 
 Polygon CreatePolygonFromTriangle(
-    const Vec4 v0, 
-    const Vec4 v1, 
-    const Vec4 v2,
-    const Tex2 t0,
-    const Tex2 t1, 
-    const Tex2 t2)
+    const Vec3 v0,                  // vertex 0
+    const Vec3 v1, 
+    const Vec3 v2,
+    const Vec2 t0,
+    const Vec2 t1, 
+    const Vec2 t2)
 {
     Polygon polygon = 
     {
-        .vertices = 
-        {
-            (Vec3){ v0.x, v0.y, v0.z },
-            (Vec3){ v1.x, v1.y, v1.z },
-            (Vec3){ v2.x, v2.y, v2.z },
-        },
-        .texCoords = { t0, t1, t2 },
+        .vertices    = { v0, v1, v2 },
+        .texCoords   = { t0, t1, t2 },
         .numVertices = 3
     };
 
@@ -99,14 +94,14 @@ void ClipPolygonAgainstPlane(Polygon* pPolygon, const int planeType)
 
     // the array of inside vertices (are in positive half space) that will be part of the final polygon returned via parameter
     Vec3 insideVertices[MAX_NUM_POLYGON_VERTICES];
-    Tex2 insideTexCoords[MAX_NUM_POLYGON_VERTICES];
+    Vec2 insideTexCoords[MAX_NUM_POLYGON_VERTICES];
     int numInsideVertices = 0;
 
     // start current and previous vertex with the first and last polygon vertices and do the same for texture coords 
     Vec3* pCurrVertex   = &pPolygon->vertices[0];
     Vec3* pPrevVertex   = &pPolygon->vertices[pPolygon->numVertices - 1];
-    Tex2* pCurrTexCoord = &pPolygon->texCoords[0];
-    Tex2* pPrevTexCoord = &pPolygon->texCoords[pPolygon->numVertices - 1];
+    Vec2* pCurrTexCoord = &pPolygon->texCoords[0];
+    Vec2* pPrevTexCoord = &pPolygon->texCoords[pPolygon->numVertices - 1];
 
     // calculate the dotQ1 (for the previous vertex)
     float prevDot = Vec3Dot(Vec3Sub(*pPrevVertex, planePoint), planeNormal);
@@ -126,16 +121,16 @@ void ClipPolygonAgainstPlane(Polygon* pPolygon, const int planeType)
             // calculate the intersection point:   I = Q1 + t(Q2-Q1)
             Vec3 intersectionPoint = 
             {
-                Lerp(pPrevVertex->x, pCurrVertex->x, t),
-                Lerp(pPrevVertex->y, pCurrVertex->y, t),
-                Lerp(pPrevVertex->z, pCurrVertex->z, t),
+                LERP(pPrevVertex->x, pCurrVertex->x, t),
+                LERP(pPrevVertex->y, pCurrVertex->y, t),
+                LERP(pPrevVertex->z, pCurrVertex->z, t),
             };
 
             // use the lerp formula to get the interpolated U and V
-            Tex2 interpolatedTexCoord = 
+            Vec2 interpolatedTexCoord = 
             {
-                .u = Lerp(pPrevTexCoord->u, pCurrTexCoord->u, t),
-                .v = Lerp(pPrevTexCoord->v, pCurrTexCoord->v, t)
+                .x = LERP(pPrevTexCoord->x, pCurrTexCoord->x, t),    // tex u
+                .y = LERP(pPrevTexCoord->y, pCurrTexCoord->y, t)     // tex v
             };
             
             // insert the new intersection point to the list of "inside vertices"
@@ -210,6 +205,10 @@ void CreateTrianglesFromPolygon(
         triangles[i].points[0] = (Vec4){ v0.x, v0.y, v0.z, 1.0f };
         triangles[i].points[1] = (Vec4){ v1.x, v1.y, v1.z, 1.0f };
         triangles[i].points[2] = (Vec4){ v2.x, v2.y, v2.z, 1.0f };
+
+        //triangles[i].points[0] = pPolygon->vertices[0];
+        //triangles[i].points[1] = pPolygon->vertices[i + 1];
+        //triangles[i].points[2] = pPolygon->vertices[i + 2];
 
         triangles[i].texCoords[0] = pPolygon->texCoords[0];
         triangles[i].texCoords[1] = pPolygon->texCoords[i + 1];

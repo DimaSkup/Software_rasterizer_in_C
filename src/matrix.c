@@ -3,6 +3,8 @@
 // Description:  implementation of all the matrix functions
 // ==================================================================
 #include "matrix.h"
+#include "macros.h"
+#include <stdio.h>
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>    // for using memcpy
@@ -174,6 +176,38 @@ Matrix MatrixRotationAxis(const Vec3 u, const float theta)
 // matrix-vector multiplication
 // ==================================================================
 
+Vec3 MatrixMulVec3(const Matrix* pM, const Vec3 v)
+{
+    // multiply Vec3 by a 4x4 matrix;
+    //
+    // the function assumes that the vector referes to a 4d homogeneous
+    // vector, thus the func assumes that w == 1 to carry out the multiplication
+
+    Vec3 vec = { 0,0,0 };            // the result vector
+
+    // compute x
+    vec.x += (v.x * pM->m[0][0]);
+    vec.x += (v.y * pM->m[0][1]);
+    vec.x += (v.z * pM->m[0][2]);
+    vec.x += pM->m[0][3];
+
+    // compute y
+    vec.y += (v.x * pM->m[1][0]);
+    vec.y += (v.y * pM->m[1][1]);
+    vec.y += (v.z * pM->m[1][2]);
+    vec.y += pM->m[1][3];
+    
+    // compute z
+    vec.z += (v.x * pM->m[2][0]);
+    vec.z += (v.y * pM->m[2][1]);
+    vec.z += (v.z * pM->m[2][2]);
+    vec.z += pM->m[2][3];
+    
+    return vec;
+}
+
+///////////////////////////////////////////////////////////
+
 void MatrixMulVec4(const Matrix* m, const Vec4 v, Vec4* outVec)
 {
     // transform input vec4 (v) with matrix and 
@@ -307,4 +341,145 @@ void MatrixView(
         z.x, z.y, z.z, -Vec3Dot(z, eye),
           0,   0,   0,                1
     };
+}
+
+
+// ==================================================================
+// common functions
+// ==================================================================
+
+void MatrixPrint(Matrix* pMat, const char* msg)
+{
+    if (msg != NULL)
+        printf("%s\n", msg);
+
+    for (int row = 0; row < 4; ++row)
+        printf("%5.2f %5.2f %5.2f %5.2f\n", pMat->m[row][0], pMat->m[row][1], pMat->m[row][2], pMat->m[row][3]);
+
+    printf("\n\n");
+}
+
+///////////////////////////////////////////////////////////
+
+void MatrixZero(Matrix* pMat)
+{
+    if (pMat)
+       memset((void*)pMat, 0, sizeof(Matrix));
+}
+
+///////////////////////////////////////////////////////////
+
+void MatrixTranspose(const Matrix* pMatSrc, Matrix* pMatDst)
+{
+    assert(pMatSrc && pMatDst && "some input ptr is NULL");
+
+    pMatDst->m00 = pMatSrc->m00;  pMatDst->m01 = pMatSrc->m10;
+	pMatDst->m02 = pMatSrc->m20;  pMatDst->m03 = pMatSrc->m30;
+	pMatDst->m10 = pMatSrc->m01;  pMatDst->m11 = pMatSrc->m11;
+	pMatDst->m12 = pMatSrc->m21;  pMatDst->m13 = pMatSrc->m31;
+	pMatDst->m20 = pMatSrc->m02;  pMatDst->m21 = pMatSrc->m12;
+	pMatDst->m22 = pMatSrc->m22;  pMatDst->m23 = pMatSrc->m32;
+	pMatDst->m30 = pMatSrc->m03;  pMatDst->m31 = pMatSrc->m13;
+	pMatDst->m32 = pMatSrc->m22;  pMatDst->m33 = pMatSrc->m33;
+}
+
+///////////////////////////////////////////////////////////
+
+float MatrixDeterminant3x3(const Matrix3x3* pM)
+{
+    if (pM == NULL)
+        return 0;
+
+    return (pM->m00 * (pM->m11 * pM->m22 - pM->m21 * pM->m12) - 
+            pM->m01 * (pM->m10 * pM->m22 - pM->m20 * pM->m12) +
+            pM->m02 * (pM->m10 * pM->m21 - pM->m20 * pM->m11));
+}
+
+///////////////////////////////////////////////////////////
+
+float MatrixDeterminant(const Matrix* pM)
+{
+    if (pM == NULL)
+        return 0;
+
+    return (pM->m00 * (pM->m11 * pM->m22 - pM->m21 * pM->m12) -
+            pM->m01 * (pM->m10 * pM->m22 - pM->m20 * pM->m12) +
+            pM->m02 * (pM->m10 * pM->m21 - pM->m20 * pM->m11));
+}
+///////////////////////////////////////////////////////////
+
+int MatrixInverse(const Matrix* pM, Matrix* pMi)
+{
+    // compute inverse matrix and return the result in pMi;
+    // if the inverse matrix exists the function returns 1;
+    // in another case it return 0, and the matrix pMi is a zero matrix;
+    //
+    // note: this function only works with matrices where last 
+    // column is [0 0 0 1]t (transpose).
+
+    // check input params
+    if (pM == NULL)
+    {
+        printf("ERROR: input ptr to matrix == NULL");
+        MatrixZero(pMi);
+        return 0;
+    }
+
+    const float det = (pM->m00 * (pM->m11 * pM->m22 - pM->m21 * pM->m12) -
+                       pM->m01 * (pM->m10 * pM->m22 - pM->m20 * pM->m12) +
+                       pM->m02 * (pM->m10 * pM->m21 - pM->m20 * pM->m11));
+
+    // test determinant == 0
+    if (fabs(det) < EPSILON_E5)
+    {
+        MatrixZero(pMi);
+        return 0;
+    }
+
+    const float det_inv = 1.0f / det;
+
+    // compute inverse matrix: adjoint(m) / det(m)
+    pMi->m00 =  det_inv * (pM->m11*pM->m22 - pM->m12*pM->m21);
+    pMi->m01 = -det_inv * (pM->m01*pM->m22 - pM->m02*pM->m21);
+    pMi->m02 =  det_inv * (pM->m01*pM->m12 - pM->m02*pM->m11);
+    pMi->m03 = 0.0f;  // always 0
+
+    pMi->m10 = -det_inv * (pM->m10*pM->m22 - pM->m12*pM->m20);
+    pMi->m11 =  det_inv * (pM->m00*pM->m22 - pM->m02*pM->m20);
+    pMi->m12 = -det_inv * (pM->m00*pM->m12 - pM->m02*pM->m10);
+    pMi->m13 = 0.0f;  // always 0
+
+    pMi->m20 =  det_inv * (pM->m10*pM->m21 - pM->m11*pM->m20);
+    pMi->m21 = -det_inv * (pM->m00*pM->m21 - pM->m01*pM->m20);
+    pMi->m22 =  det_inv * (pM->m00*pM->m11 - pM->m01*pM->m10);
+    pMi->m23 = 0.0f;  // always 0
+
+    pMi->m30 = -( pM->m30 * pMi->m00 + pM->m31 * pMi->m10 + pM->m32 * pMi->m20 );
+    pMi->m31 = -( pM->m30 * pMi->m01 + pM->m31 * pMi->m11 + pM->m32 * pMi->m21 );
+    pMi->m32 = -( pM->m30 * pMi->m02 + pM->m31 * pMi->m12 + pM->m32 * pMi->m22 );
+    pMi->m33 = 1.0f;  // always 1
+
+    return 1;
+}
+///////////////////////////////////////////////////////////
+
+Matrix MatrixInverseTranspose(Matrix mat)
+{	
+    // we clear out any translation from the matrix because we use the inverse-transpose
+	// to transform vectors, and translations only apply to points
+    //mat.m03 = 0;
+    //mat.m13 = 0;
+    //mat.m23 = 0;
+    //mat.m33 = 1;
+    mat.m30 = 0;
+    mat.m31 = 0;
+    mat.m32 = 0;
+    mat.m33 = 1;
+
+    Matrix inverse;
+
+    MatrixInverse(&mat, &inverse);
+    MatrixTranspose(&inverse, &mat);
+
+    return mat;
 }

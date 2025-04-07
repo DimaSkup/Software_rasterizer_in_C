@@ -5,8 +5,8 @@
 // Created:      03.03.25  by DimaSkup
 // ==================================================================
 #include "camera.h"
-#include "math_common.h"
 #include "matrix.h"
+#include "macros.h"
 #include <stdio.h>
 
 static Camera s_Camera = 
@@ -68,9 +68,9 @@ void RotateCameraYaw(const float angle)
 {
     s_Camera.yaw += angle;
 
-    // limit the yaw value in range (-2PI < yaw < 2PI)
-    s_Camera.yaw = (s_Camera.yaw > +M_2PI) ? -M_2PI : s_Camera.yaw;
-    s_Camera.yaw = (s_Camera.yaw < -M_2PI) ? +M_2PI : s_Camera.yaw;
+    // limit the yaw value in range (-2*PI < yaw < 2*PI)
+    s_Camera.yaw = (s_Camera.yaw > +PI_2) ? -PI_2 : s_Camera.yaw;
+    s_Camera.yaw = (s_Camera.yaw < -PI_2) ? +PI_2 : s_Camera.yaw;
 
     // compute the RIGHT direction vector of the camera
     const Vec3 up = {0,1,0};
@@ -103,15 +103,15 @@ void RotateCameraPitch(float angle)
     s_Camera.pitch += angle;
 
     // limit the pitch value
-    if (s_Camera.pitch > M_PIDIV2 - 0.1f)
+    if (s_Camera.pitch > PI_DIV_2 - 0.1f)
     {
-        s_Camera.pitch = M_PIDIV2 - 0.1f;
+        s_Camera.pitch = PI_DIV_2 - 0.1f;
         angle = 0.0f;
     }
     
-    if (s_Camera.pitch < -M_PIDIV2 + 0.1f)
+    if (s_Camera.pitch < -PI_DIV_2 + 0.1f)
     {
-        s_Camera.pitch = -M_PIDIV2 + 0.1f;
+        s_Camera.pitch = -PI_DIV_2 + 0.1f;
         angle = 0.0f;
     }
 

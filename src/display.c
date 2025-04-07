@@ -1,5 +1,4 @@
 #include "display.h"
-#include "math_common.h"
 
 // ==========================
 // definitions
@@ -13,11 +12,12 @@ static SDL_Texture*  g_pColorBufferTexture = NULL;
 
 const int     g_DefaultWindowWidth  = 320;
 const int     g_DefaultWindowHeight = 180;
-static int    g_WindowWidth  = g_DefaultWindowWidth;
-static int    g_WindowHeight = g_DefaultWindowHeight;
-static int    g_WindowArea   = g_DefaultWindowWidth * g_DefaultWindowHeight;
-static u32*   g_ColorBuffer  = NULL;
-static float* g_ZBuffer      = NULL;
+
+int    g_WindowWidth  = g_DefaultWindowWidth;
+int    g_WindowHeight = g_DefaultWindowHeight;
+int    g_WindowArea   = g_DefaultWindowWidth * g_DefaultWindowHeight;
+u32*   g_ColorBuffer  = NULL;
+float* g_ZBuffer      = NULL;
 
 
 // ==================================================================
@@ -151,173 +151,6 @@ bool ShouldRenderWireframe(void)
 bool ShouldRenderWireVertices(void)
 {
     return g_RenderMethod == RENDER_WIRE_VERTEX;
-}
-
-///////////////////////////////////////////////////////////
-
-void DrawPixel(int x, int y, Color color) 
-{
-    // if we have wrong input args we just do nothing
-    if ((x < 0) || (x >= g_WindowWidth) || (y < 0) || (y >= g_WindowHeight))
-        return;
-
-    // set a pixel color at position (x,y) on the screen
-    g_ColorBuffer[y * g_WindowWidth + x] = color;
-}
-
-///////////////////////////////////////////////////////////
-
-void DrawPixelByIdx(const int pixelIdx, Color color)
-{
-    // set a color for a particular pixel by input index
-
-    if (pixelIdx < 0 || (pixelIdx >= g_WindowArea))
-        return;
-
-    g_ColorBuffer[pixelIdx] = color;
-}
-
-///////////////////////////////////////////////////////////
-
-void DrawLine(int x0, int y0, int x1, int y1, Color color)
-{
-    // DDA line drawing algorithm
-    int dx = (x1 - x0);               // delta X
-    int dy = (y1 - y0);               // delta Y
-
-    // longest side length
-    int sideLength = abs(dx) >= abs(dy) ? abs(dx) : abs(dy);
-
-    // find how much we should increment in both x and y each stem
-    float xInc = dx / (float)sideLength;
-    float yInc = dy / (float)sideLength;
-
-    float currX = x0;
-    float currY = y0;
-
-    for (int i = 0; i <= sideLength; ++i)
-    {
-        DrawPixel(round(currX), round(currY), color);
-        currX += xInc;
-        currY += yInc;
-    }
-}
-
-///////////////////////////////////////////////////////////
-
-void DrawLine2(int x0, int y0, int x1, int y1, Color color)
-{
-    // Bresenham line drawing algorithm
-
-    int dx = abs(x1 - x0);
-    int dy = abs(y1 - y0);
-    int sx = (x1 >= x0) ? 1 : -1;
-    int sy = (y1 >= y0) ? 1 : -1;
-
-    // first case
-    if (dy <= dx)
-    {
-        int d = (dy << 1) - dx;
-        int d1 = dy << 1;
-        int d2 = (dy - dx) << 1;
-
-        // draw the first pixel of the line
-        DrawPixel(x0, y0, color);
-
-        for (int x = x0 + sx, y = y0, i = 1; i <= dx; i++, x+= sx)
-        {
-            if (d > 0)
-            {  
-                d += d2;
-                y += sy;
-            }
-            else
-            {
-                d += d1;
-            }
-
-            DrawPixel(x, y, color);
-        }
-    }
-    // second case
-    else
-    {
-        int d = (dx << 1) - dy;
-        int d1 = dx << 1;
-        int d2 = (dx - dy) << 1;
-
-        // draw the first pixel of the line
-        DrawPixel(x0, y0, color);
-
-        for (int y = y0 + sy, x = x0, i = 1; i <= dy; i++, y += sy)
-        {
-            if (d > 0)
-            {
-                d += d2;
-                x += sx;
-            }
-            else
-            {
-                d += d1;
-            }
-
-            DrawPixel(x, y, color);
-        }
-    }
-}
-
-///////////////////////////////////////////////////////////
-
-void DrawTriangle(int x0, int y0, int x1, int y1, int x2, int y2, Color color)
-{
-    // draw a line btw each pair of triangle's points
-    DrawLine2(x0, y0, x1, y1, color);
-    DrawLine2(x1, y1, x2, y2, color);
-    DrawLine2(x0, y0, x2, y2, color);
-}
-
-///////////////////////////////////////////////////////////
-
-void DrawGrid(void)
-{
-    const int multiple = 10;
-    const u32 gridColor = 0xFF333333;
-
-    for (int y = 0; y < g_WindowHeight; y += multiple)
-    {
-        for (int x = 0; x < g_WindowWidth; x += multiple)
-        {
-            g_ColorBuffer[(g_WindowWidth * y) + x] = gridColor;
-        }
-    }
-}
-
-//////////////////////////////////////////////////////////
-
-void DrawRect(int x, int y, int width, int height, Color color)
-{
-    for (int posY = y; posY < (y + height); ++posY)
-    {
-        for (int posX = x; posX < (x + width); ++posX)
-        {
-            g_ColorBuffer[g_WindowWidth * posY + posX] = color;
-        }
-    }
-}
-
-///////////////////////////////////////////////////////////
-
-void DrawCircle(int x, int y, int radius, Color color)
-{
-    const float radianStep = 0.0175f;    
-
-    for (float rad = 0.0f; rad < M_2PI; rad += radianStep)
-    {
-        int rx = (int)(cosf(rad) * radius) + x;
-        int ry = (int)(sinf(rad) * radius) + y;
-
-        g_ColorBuffer[(g_WindowWidth * ry) + rx] = color;
-    }
 }
 
 ///////////////////////////////////////////////////////////
