@@ -79,5 +79,6 @@ typedef struct
 void InitEmptyMesh(Mesh* pMesh);
 void InitEmptyModel(Model* pModel);
 
+float ComputeModelRadius(Model* pModel);
 
 #endif

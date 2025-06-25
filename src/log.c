@@ -16,6 +16,18 @@ FILE* s_pLogFile = NULL;
 
 ///////////////////////////////////////////////////////////
 
+void SetConsoleColor(const char* keyColor)
+{
+    printf("%s", keyColor);
+}
+
+void ResetConsoleColor()
+{
+    printf("%s", RESET);
+}
+
+///////////////////////////////////////////////////////////
+
 bool InitLogger(void)
 {
     // init  the logger: create a logger file and print info about it
@@ -77,7 +89,45 @@ void LogPrint(const char* format, ...)
     memset(buffer, 0, 256);
 
     vsprintf(buffer, format, args);
+    
+    SetConsoleColor(GREEN);
     PrintHelper("", buffer);
+    ResetConsoleColor();
+
+    va_end(args);
+}
+
+///////////////////////////////////////////////////////////
+
+void LogDebug(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    char buffer[256];
+    memset(buffer, 0, 256);
+
+    vsprintf(buffer, format, args);
+    PrintHelper("DEBUG: ", buffer);
+
+    va_end(args);
+}
+
+///////////////////////////////////////////////////////////
+
+void LogError(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    char buffer[256];
+    memset(buffer, 0, 256);
+
+    vsprintf(buffer, format, args);
+
+    SetConsoleColor(BOLDRED);
+    PrintHelper("ERROR: ", buffer);
+    ResetConsoleColor();
 
     va_end(args);
 }
@@ -94,7 +144,6 @@ void PrintHelper(const char* levText, const char* text)
 
     sprintf(buffer, "[%05ld]  %s%s", clock(), levText, text);
     printf("%s\n", buffer);
-
 
     if (s_pLogFile)
         fprintf(s_pLogFile, "%s\n", buffer);

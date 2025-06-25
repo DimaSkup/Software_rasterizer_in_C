@@ -41,7 +41,7 @@ bool InitializeWindow(void)
     //g_WindowArea = g_WindowWidth * g_WindowHeight;
 #if 1
 
-    // if we want to use "old school" style
+    // if we want to use "old school" style (image is pixelated)
     if (true)
     {
         g_WindowWidth  = fullscreenWidth / 2;

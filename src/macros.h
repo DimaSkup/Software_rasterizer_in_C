@@ -8,14 +8,15 @@
 #define MACROS_H
 
 // bit manipulation macros
-#define SET_BIT  (word, bit_flag) ((word) = (word | bit_flag))
+#define SET_BIT(word, bit_flag) ((word) = (word | bit_flag))
 #define RESET_BIT(word, bit_flag) ((word) = (word & (~bit_flag)))
 
 // used for swapping algorithm
 #define SWAP(a,b,t) { t=a; a=b; b=t; }
 
+
 // ==================================================================
-// math
+// Math
 // ==================================================================
 
 // PI number and related stuff
@@ -41,5 +42,15 @@
 // linear interpolation (params are expected to be float or double)
 #define LERP(a,b,t) (a + t * (b-a))
 
+
+// ==================================================================
+// Color
+// ==================================================================
+
+// this builds a 16 bit color values in 5.5.5 format (1-bit alpha mode)
+#define RGB16BIT555(r,g,b) ((b & 31) + ((g & 31) << 5) + ((r & 31) << 10))
+
+// this builds a 16 bit color value in 5.6.5 format (green dominate mode)
+#define RGB16BIT565(r,g,b) ((b & 31) + ((g & 63) << 5) + ((r & 31) << 11))
 
 #endif

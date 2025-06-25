@@ -6,7 +6,7 @@
 #include "macros.h"
 #include "log.h"
 #include <assert.h>
-//#include "./loaders/plx_loader.h"
+#include "./loaders/plx_loader.h"
 
 
 // ==================================================================
@@ -148,16 +148,16 @@ void Initialize(void)
     SDL_ShowCursor(SDL_DISABLE);
     SDL_SetRelativeMouseMode(SDL_TRUE);   // to make able mouse cursor move past the window's border
 
-#if 0
+#if 1 
     Model model;
     const Vec3 scale = { 1,1,1 };
     const Vec3 pos = { 0,0,0 };
     const Vec3 rot = { 0,0,0 };
 
-    LoadObjectPLG(&model, "assets/cube.plg", &scale, &pos, &rot);
+    LoadObjectPLG(&model, "assets/plg/cube1.plg", scale, pos, rot);
 #endif
 
-    LogPrint(LOG_INFO, "kekw!");
+    
 
     printf("Application is initialized\n");
     exit(-1);

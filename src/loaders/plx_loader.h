@@ -8,8 +8,10 @@
 #ifndef PLX_LOADER_H
 #define PLX_LOADER_H
 
+#include "../log.h"
+#include "../macros.h"
 #include "../model.h"
-
+#include "../color.h"
 
 // ==================================================================
 // bitmasks for testing
@@ -85,12 +87,18 @@ int LoadObjectPLG(
     // this object to prevent other additional calls
     // of functions for scatic objects
 
+
     FILE* pFile = NULL;
     char  buffer[256];
+    char  logBuf[64];   // a buffer which is used for log messages
     char* tokenString;  // point to the read string; preparing to analyze
 
     // fill in the working buffer with zeros
     memset(buffer, 0, 256);
+    memset(logBuf, 0, 64);
+
+    sprintf(logBuf, "Load object(model) from .PLG/.PLX file: %s", filename);
+    LogPrint(LOG_INFO, logBuf);
 
     // STAGE 1: reset and initialization of the object
     memset(pObj, 0, sizeof(Model));
@@ -110,20 +118,21 @@ int LoadObjectPLG(
     // STAGE 2: open the .PLG file for reading
     if (!(pFile = fopen(filename, "r")))
     {
-        printf("Couldn't open PLG file %s.", filename);
+        sprintf(logBuf, "Couldn't open PLG file %s.", filename);
+        LogError(LOG_INFO, logBuf);
         return 0;
     }
 
     // STAGE 3: get the first lexem which must be the object descriptor
     if (!(tokenString = GetLinePLG(buffer, 255, pFile)))
     {
-        //TODO: LogError
-        printf("PLG file error with file %s (object descriptor is invalid)", filename);
+        sprintf(logBuf, "PLG file error with file %s (object descriptor is invalid)", filename);
+        LogError(LOG_INFO, logBuf);
         return 0;
     }
 
-    // TODO: LogDebug
-    printf("Object descriptor: %s\n", tokenString);
+    sprintf(logBuf, "Object descriptor: %s\n", tokenString);
+    LogDebug(logBuf);
 
     // analyze params of the object
     sscanf(tokenString, "%s %d %d", pObj->name, &pObj->numVertices, &pObj->numFaces);
@@ -137,8 +146,8 @@ int LoadObjectPLG(
         // get vertex
         if (!(tokenString = GetLinePLG(buffer, 255, pFile)))
         {
-            // TODO: LogError
-            printf("PLG file error with file %s (vertex list is invalid).", filename);
+            sprintf(logBuf, "PLG file error with file %s (vertex list is invalid).", filename);
+            LogError(LOG_INFO, logBuf);
             return 0;
         }
 
@@ -153,22 +162,15 @@ int LoadObjectPLG(
         pObj->verticesLocal[vIdx].y *= scale.y;        
         pObj->verticesLocal[vIdx].z *= scale.z;        
 
-        // TODO: LogDebug
-        printf("\nVertex %d = %f, %f, %f\n", vIdx,
+        LogDebug("\nVertex %d = %f, %f, %f\n", vIdx,
                 pObj->verticesLocal[vIdx].x,
                 pObj->verticesLocal[vIdx].y,
                 pObj->verticesLocal[vIdx].z);
     } // for
 
-#if 0
     // compute average and maximal radius of the object
     ComputeModelRadius(pObj);
-#endif
-
-    // TODO: LogDebug
-    printf("\nObject average radius = %f, max radius = %f\n",
-            pObj->avgRadius, pObj->maxRadius);
-
+    LogDebug("\nObject average radius = %f, max radius = %f\n", pObj->avgRadius, pObj->maxRadius);
 
     // ----------------------------------------------------
 
@@ -182,13 +184,12 @@ int LoadObjectPLG(
         // get descriptor of the polygon
         if (!(tokenString = GetLinePLG(buffer, 255, pFile)))
         {
-            // TODO: LogError
-            printf("PLG file error: %s (face descriptor is invalid)\n", filename);
+            sprintf(logBuf, "PLG file error: %s (face descriptor is invalid)\n", filename);
+            LogError(LOG_INFO, logBuf);
             return 0;
         }
 
-        // TODO: LogDebug
-        printf("\nPolygon %d:", idx);
+        LogDebug("\nPolygon %d:", idx);
 
         // in each line we expect data for only 3 vertices;
         sscanf(tokenString, "%s %d %d %d %d", tmpString,
@@ -198,13 +199,12 @@ int LoadObjectPLG(
                &pObj->faces[idx].idxs[2]);
 
         // since polygon descriptor can be in hex format we have to check it
-        if (tmpString[0] == '0' && toUpper(tmpString[1]) == 'X')
+        if (tmpString[0] == '0' && toupper(tmpString[1]) == 'X')
             sscanf(tmpString, "%x", &polySurfaceDesc);
         else
             polySurfaceDesc = atoi(tmpString);
 
-        // TODO: LogDebug
-        printf("\nSurface Desc = 0x%.4x, numVertices = %d, indices [%d %d %d]\n",
+        LogDebug("\nSurface Desc = 0x%.4x, numVertices = %d, indices [%d %d %d]\n",
                 polySurfaceDesc,
                 polyNumVertices,
                 pObj->faces[idx].idxs[0],
@@ -222,11 +222,11 @@ int LoadObjectPLG(
         if ((polySurfaceDesc & PLX_2SIDED_FLAG))
         {
             SET_BIT(pObj->faces[idx].attr, FACE_ATTR_2SIDED);
-            printf("\n2 sided");
+            LogDebug(LOG_INFO, "\n2 sided");
         }
         else
         {
-            printf("\n1 sided");
+            LogDebug(LOG_INFO, "\n1 sided");
         }
 
         // setup color mode and color value
@@ -247,8 +247,7 @@ int LoadObjectPLG(
             // convert 4.4.4 into 8.8.8.
             pObj->faces[idx].color = RGB16Bit(red * 16, green * 16, blue * 16);
 
-            // TODO: LogDebug
-            printf("\nRGB color = [%d %d %d]", red, green, blue);
+            LogDebug("\nRGB color = [%d %d %d]", red, green, blue);
 
         } // if
         else
@@ -257,10 +256,9 @@ int LoadObjectPLG(
             SET_BIT(pObj->faces[idx].attr, FACE_ATTR_8BITCOLOR);
 
             // extract last 8 bits; so it is a color index
-            pObj-faces[idx].color = (polySurfaceDesc & 0x00FF);
+            pObj->faces[idx].color = (polySurfaceDesc & 0x00FF);
 
-            // TODO: LogDebug
-            printf("\n8-bit color index = %d", pObj->faces[idx].color);
+            LogDebug("\n8-bit color index = %d", pObj->faces[idx].color);
 
         } // else
     
@@ -272,28 +270,27 @@ int LoadObjectPLG(
         {
             case PLX_SHADE_MODE_PURE_FLAG:
             {
-                SET_BIT(pObj->faces[idx].attr, FACE_ATTR_SHADE_MODE_PURE;
+                SET_BIT(pObj->faces[idx].attr, FACE_ATTR_SHADE_MODE_PURE);
 
-                // TODO: LogDebug
-                printf("\nShade mode = pure");
+                LogDebug("\nShade mode = pure");
                 break;
             }
             case PLX_SHADE_MODE_FLAT_FLAG:
             {
                 SET_BIT(pObj->faces[idx].attr, FACE_ATTR_SHADE_MODE_FLAT);
-                printf("\nShade mode = flat");
+                LogDebug("\nShade mode = flat");
                 break;
             }
             case PLX_SHADE_MODE_GOURAUD_FLAG:
             {
                 SET_BIT(pObj->faces[idx].attr, FACE_ATTR_SHADE_MODE_GOURAUD);
-                printf("\nShade mode = gouraud");
+                LogDebug("\nShade mode = gouraud");
                 break;
             }
             case PLX_SHADE_MODE_PHONG_FLAG:
             {
                 SET_BIT(pObj->faces[idx].attr, FACE_ATTR_SHADE_MODE_PHONG);
-                printf("\nShade mode = phong");
+                LogDebug("\nShade mode = phong");
                 break;
             }
 
@@ -302,13 +299,15 @@ int LoadObjectPLG(
     
 
         // set active state of polygon
-        pObj->faces[idx].state = POLY_STATE_ACTIVE;
+        pObj->faces[idx].state = FACE_STATE_ACTIVE;
 
     } // for faces
 
 
     // close the file
     fclose(pFile);
+
+    LogPrint("Object(model) is successfully loaded from .PLG/PLX file");
 
     // return success
     return 1;
