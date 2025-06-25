@@ -3,8 +3,8 @@
 // Created:     03.02.25 by DimaSkup
 // ==================================================================
 #include "application.h"
+#include "log.h"
 #include <assert.h>
-
 
 // ==================================================================
 // initialize global variables
@@ -41,13 +41,19 @@ Matrix g_ProjMatrix;
 
 void Initialize(void) 
 {
-    // initialize window, some global variables and game objects
+    // initialize a logger, window, some global variables and game objects
+
+    if (!InitLogger())
+    {
+        Shutdown();
+        exit(-1);
+    }
 
     g_IsRunning = InitializeWindow();
 
     if (!g_IsRunning)
     {
-        printf("can't initialize the window\n");
+        LogErr(LOG, "can't initialize the window");
         Shutdown();
         exit(-1);
     }
@@ -133,7 +139,8 @@ void Initialize(void)
     SDL_ShowCursor(SDL_DISABLE);
     SDL_SetRelativeMouseMode(SDL_TRUE);   // to make able mouse cursor move past the window's border
 
-    printf("Application is initialized\n");
+    LogMsg(LOG, "Application is initialized\n");
+
 }
 
 ///////////////////////////////////////////////////////////
@@ -155,10 +162,11 @@ void Shutdown(void)
 {
     // call this func after finishing of the main game loop
     
-    printf("Application shutdown:\n");
+    LogMsg(LOG, "Application destroy start");
 
     DestroyWindow();
     FreeResources();
+    ShutdownLogger();
 }
 
 
@@ -215,6 +223,7 @@ void ProcessKeydown(const int keycode)
         }
         case SDLK_F12:
         {
+            // make a screenshot
             SDL_DisplayMode displayMode;
             SDL_GetCurrentDisplayMode(0, &displayMode);
 
@@ -658,7 +667,7 @@ void Render(void)
 
 void FreeAssetResources(Mesh* pMesh)
 {
-    printf("Free mesh: %s\n", pMesh->name);
+    LogDbg(LOG, "Free mesh: %s", pMesh->name);
 
     if (pMesh->pTexture)
         upng_free(pMesh->pTexture);

@@ -1,7 +1,7 @@
 #include "mesh.h"
 #include "array.h"
-#include "console_color.h"
 #include "obj_loader.h"
+#include "log.h"
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -61,7 +61,7 @@ void LoadMesh(
     int result = LoadObjFileData(pMesh, fileDataPath);
     if (result == -1)
     {
-        printf("\nERROR: can't read in .obj file data: %s\n", fileDataPath);
+        LogErr(LOG, "can't read in .obj file data: %s", fileDataPath);
         return;
     }
 
@@ -83,12 +83,25 @@ int LoadObjFileData(Mesh* pMesh, const char* filepath)
     // read the contents of the .obj file
     // and load it into the input mesh
 
-    printf("Try to load an .obj file: %s\n", filepath);
+    if (!pMesh)
+    {
+        LogErr(LOG, "input ptr to mesh == NULL");
+        return -1;
+    }
+
+    if (!filepath || filepath[0] == '\0')
+    {
+        LogErr(LOG, "input filename is empty");
+        return - 1;
+    }
+
+
+    LogDbg(LOG, "Start load .obj file: %s", filepath);
 
     FILE* pFile = fopen(filepath, "r");
     if (pFile == NULL)
     {
-        fprintf(stderr, "error opening .obj file");
+        LogErr(LOG, "error opening .obj file: %s", filepath);
         return -1;
     }     
 
@@ -124,20 +137,16 @@ int LoadObjFileData(Mesh* pMesh, const char* filepath)
 
     // set and print the number of faces in this mesh
     pMesh->numFaces = ArrayLength(pMesh->faces);
-    printf("- the number of loaded faces:%d\n", pMesh->numFaces);
+    //printf("- the number of loaded faces:%d\n", pMesh->numFaces);
    
     // set a name for the mesh
-    const int nameLength = (strlen(filepath) > 32) ? 32 : strlen(filepath);
-    strncpy(pMesh->name, filepath, nameLength);
-
+    strncpy(pMesh->name, filepath, 32);
 
     // release memory from the temp texture coords data buffer
     ArrayFree((void**)&(pMesh->texCoords));
 
     fclose(pFile);
-
-
-    printf(".obj asset is successfully loaded: %s\n\n", filepath); 
+    LogMsg(LOG, "asset is loaded: %s", filepath); 
 
     return 0; 
 }
