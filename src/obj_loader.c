@@ -8,13 +8,13 @@
 #include <string.h>
 #include <assert.h>
 
-// debug flags (are used to show the first and the last element of data block; for instance: print the first and last vertices values)
+// debug flags (are used to show the first and the last element of
+// data block; for instance: print the first and last vertices values)
 #define PRINT_OBJ_VERTICES_DEBUG_INFO 0
 #define PRINT_OBJ_TEXTURES_DEBUG_INFO 0
 #define PRINT_OBJ_NORMALS_DEBUG_INFO 0
 #define PRINT_OBJ_FACES_DEBUG_INFO 0
 #define BUFFER_SIZE 64
-
 
 
 Vec3* ReadVerticesData(FILE* pFile, char* buffer)
