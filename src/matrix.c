@@ -242,14 +242,14 @@ Matrix MatrixInitPerspective(
     const float nearZ,
     const float farZ)
 {
-    // | (h/w)*1/tan(fov/2)             0          0                0 |
+    // | (h/w)/tan(fov/2)               0          0                0 |
     // |                  0 1/tanf(fov/2)          0                0 |
     // |                  0             0 zf/(zf-zn) (-zf*zn)/(zf-zn) |
     // |                  0             0          1                0 |
     Matrix m;
     memset(m.m, 0, sizeof(Matrix));
 
-    m.m00 = aspectRatio * (1.0f / tanf(fov * 0.5f));
+    m.m00 = aspectRatio / tanf(fov * 0.5f);
     m.m11 = 1.0f / tanf(fov * 0.5f);
     m.m22 = farZ / (farZ - nearZ);
     m.m23 = (-farZ * nearZ) / (farZ - nearZ);
